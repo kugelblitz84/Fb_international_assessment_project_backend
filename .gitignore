@@ -15,10 +15,6 @@ lerna-debug.log*
 # OS
 .DS_Store
 
-# Tests
-/coverage
-/.nyc_output
-
 # IDEs and editors
 /.idea
 .project
@@ -41,6 +37,11 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+.env.*
+!.env.example
+
+# Local TypeScript build metadata
+*.tsbuildinfo
 
 # temp directory
 .temp

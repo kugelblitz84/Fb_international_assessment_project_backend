@@ -1,98 +1,73 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# AutoCare backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS foundation for the AutoCare vehicle service platform. **Phase 1 is implemented:** typed configuration, shared HTTP bootstrap, PostgreSQL/Prisma infrastructure, Zod request validation, a framework-independent domain error base, and public health reporting.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Local setup
 
-## Description
+Use npm, Node.js 22.12+ on the 22 release line or Node.js 24+, and a running PostgreSQL instance. Node.js 24 LTS is recommended for this project.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```sh
+npm ci
 ```
 
-## Compile and run the project
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```powershell
+Copy-Item .env.example .env
 ```
 
-## Run tests
+Set `DATABASE_URL` in `.env` to an existing local database with your credentials. The example password is a placeholder. PostgreSQL must be reachable before application initialization completes.
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+```sh
+npm run prisma:generate
+npm run start:dev
 ```
 
-## Deployment
+The server listens on port 3000 by default. Local API base URL: **`http://localhost:3000/api/v1`**. Android emulator base URL: **`http://10.0.2.2:3000/api/v1`**.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+```sh
+curl http://localhost:3000/api/v1/health/status
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+The health response includes `status`, UTC `timestamp`, `uptimeSeconds`, and the configured `environment`. It reports process liveness; it does not run a database readiness query.
 
-## Resources
+## Verification
 
-Check out a few resources that may come in handy when working with NestJS:
+```sh
+npm run build
+npm run lint
+npx prisma validate
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+The build generates Prisma Client automatically. Automated tests and test tooling are omitted for this assignment. After starting the application, verify the health endpoint with the curl command above.
 
-## Support
+```sh
+npm run start:prod
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Production startup uses the compiled `dist/main.js`; build first. Production configuration requires explicit HTTPS browser origins. Authentication, cookie security, and secret validation will be implemented alongside authentication, which is not exposed yet.
 
-## Stay in touch
+## Project layout
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```text
+prisma/schema.prisma           Generator and PostgreSQL datasource; no models yet
+prisma.config.ts              Schema-directory and migration-path configuration
+src/app/                      Root composition and reusable HTTP configuration
+src/core/config/              Global typed configuration
+src/core/database/            Shared PrismaPg lifecycle provider
+src/core/errors/              Pure domain error base
+src/core/validator/            Generic Zod validation pipe
+src/features/health/          Public health controller and service
+```
 
-## License
+The [reference registration architecture](https://github.com/kugelblitz84/edu_app_backend/tree/002711b1219b2bf4f64754a1c78f2c13a9b3c7ad/src/features/auth/register) guides later domain contracts, data implementations, and factory-provider composition. Existing compatible NestJS scaffold dependencies are preserved.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## Scope and documentation
+
+No business models, migrations, seeds, registration/login, sessions, catalogue/profile APIs, availability, bookings, AI integration, or outbox processing have been implemented. Schema/migration/seed verification and the ER/DBML diagram belong to Phase 2. The reference and frontend repositories have not been modified.
+
+- [API behavior and examples](docs/api.md)
+- [Environment variables](docs/environment.md)
+- [Architecture and dependency rules](docs/architecture.md)
+- [Database setup and verification](docs/database.md)
+- [Flutter base URL and future CSRF transport changes](docs/flutter-integration.md)
+- [Development workflow](WORKFLOW.md)
+- [Phase 1 verification report](docs/phase-1-report.md)

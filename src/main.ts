@@ -1,8 +1,11 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { Logger } from '@nestjs/common';
+import { bootstrap } from './app/bootstrap';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.PORT ?? 3000);
-}
-bootstrap();
+void bootstrap().catch(() => {
+  // Driver errors may contain connection credentials; keep startup output safe.
+  Logger.error(
+    'Application startup failed. Check configuration and database connectivity.',
+    'Bootstrap',
+  );
+  process.exitCode = 1;
+});
