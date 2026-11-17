@@ -57,7 +57,12 @@ test(
       const user = payload.user as { id: string; email: string };
       userId = user.id;
       assert.equal(user.email, email);
-      assert.deepEqual(Object.keys(user).sort(), ['email', 'id', 'name']);
+      assert.deepEqual(Object.keys(user).sort(), [
+        'email',
+        'id',
+        'name',
+        'role',
+      ]);
       const firstCookie = cookie(registered);
       assert.match(registered.headers.get('set-cookie')!, /HttpOnly/);
       assert.doesNotMatch(registered.headers.get('set-cookie')!, /; Secure/);
@@ -124,6 +129,10 @@ test(
         'x-csrf-token': csrfToken,
       });
       assert.equal(rotated.status, 200);
+      assert.equal(
+        ((await read(rotated.clone())).user as { role: string }).role,
+        'CUSTOMER',
+      );
       const nextCookie = cookie(rotated);
       const history = await db.authRefreshToken.findMany({
         where: { sessionId: session.id },

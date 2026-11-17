@@ -8,6 +8,7 @@ type Environment = Readonly<Record<string, string | undefined>>;
 export interface AppConfig {
   readonly nodeEnv: NodeEnvironment;
   readonly port: number;
+  readonly publicApiBaseUrl?: string;
   readonly databaseUrl: string;
   readonly corsOrigins: string[];
   readonly httpBodyLimitBytes: number;
@@ -156,7 +157,26 @@ export function loadAppConfig(
   const audience = environment.AUTH_AUDIENCE?.trim() ?? 'autocare-api';
   if (!issuer || !audience)
     throw new Error('AUTH_ISSUER and AUTH_AUDIENCE cannot be empty.');
+  const publicApiBaseUrl = environment.PUBLIC_API_BASE_URL?.trim().replace(
+    /\/$/,
+    '',
+  );
+  if (publicApiBaseUrl) {
+    const url = new URL(publicApiBaseUrl);
+    if (
+      !['http:', 'https:'].includes(url.protocol) ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash ||
+      (nodeEnv === 'production' && url.protocol !== 'https:')
+    )
+      throw new Error(
+        'PUBLIC_API_BASE_URL must be an HTTP(S) API base URL; production requires HTTPS.',
+      );
+  }
   return {
+    publicApiBaseUrl,
     nodeEnv,
     gemini: {
       apiKey: environment.GEMINI_API_KEY?.trim() || undefined,

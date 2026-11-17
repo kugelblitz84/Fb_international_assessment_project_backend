@@ -69,3 +69,13 @@ Two bays operate every day, 09:00–12:00 and 13:00–18:00 Asia/Dhaka, includin
 Availability generates requested dates on demand within a rolling window (default: today plus 29 days), at 15-minute increments. Slots persist with `(serviceId,bayId,startsAt)` uniqueness and stable IDs. Past slots remain; no `isBooked` flag or scheduled cleanup exists. Closed intervals, disabled bays, stale durations, times outside hours and past starts are excluded. The single-workshop implementation uses Asia/Dhaka's UTC+06:00 conversion.
 
 The Gemini integration adds no tables. It uses reserved `PlatformSetting` keys `internal:assistant:requests:YYYY-MM-DD` with `{ "count": number }` for atomic shared daily usage limits. These keys are excluded from the public allowlist and provider prompts. They count requests only, never chat content, profiles or tokens. Do not edit active-day counters; old counters can be archived by an operator after their UTC day.
+
+## Administration migration
+
+`202611170003_admin` adds UserRole (CUSTOMER, ADMIN), a NOT NULL users.role column with CUSTOMER default, and media_assets (UUID, bytea data, verified mime_type, file_size, created_at). Existing users retain all data and become CUSTOMER automatically. The media check constraint enforces allowed MIME types, actual byte length and the 2097152-byte maximum. Uploaded binaries have no catalog joins and are selected only by public binary reads.
+
+Deploy with `npm run prisma:validate`, `npm run prisma:generate`, `npm run prisma:migrate:deploy`; do not reset or replace earlier migrations. Database support/permissions for btree_gist remain required. Back up before deploying as usual. Create administrators explicitly with `npm run admin:create` after migration, never via ordinary catalog seed.
+
+Service/package changes use serializable transactions; unique/FK conflicts become HTTP errors. Existing composition/type triggers remain intact. Future slot intervals follow duration edits transactionally, while appointment snapshots remain immutable. Booking takes a shared service lock to serialize against admin service edits. Appointment status updates condition on the previous status; completed/cancelled states leave the existing booking exclusion predicate and release capacity. All existing ownership constraints remain.
+
+Schema documentation was exported from the isolated migrated test database; SQL migrations remain authoritative.

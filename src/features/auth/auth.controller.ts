@@ -23,26 +23,7 @@ import { RateLimitService } from '../../core/auth/services/rate-limit.service';
 import { RegisterService } from './register/register.service';
 import { LoginService } from './login/login.service';
 import { UserRepository } from './data/user.repository';
-const profile = z.object({
-  name: z.string().trim().min(1).max(160),
-  email: z.email().trim().toLowerCase().max(320),
-});
-const login = z
-  .object({
-    email: z.string().trim().toLowerCase().max(320).pipe(z.email()),
-    password: z.string().min(1).max(256),
-  })
-  .strict();
-const register = profile
-  .extend({ email: login.shape.email, password: z.string().min(10).max(256) })
-  .strict();
-const update = z
-  .object({
-    name: profile.shape.name.optional(),
-    email: login.shape.email.optional(),
-  })
-  .strict()
-  .refine((x) => Object.keys(x).length > 0, 'Supply name or email.');
+import { register, login, update } from './registration.schemas';
 
 @Controller({ version: '1' })
 export class FeatureAuthController {

@@ -16,6 +16,11 @@ Enum ServiceType {
   PACKAGE
 }
 
+Enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
 Enum UserStatus {
   ACTIVE
   SUSPENDED
@@ -79,6 +84,14 @@ Table business_hours {
   opens_at varchar(5) [not null]
   closes_at varchar(5) [not null]
   is_closed boolean [not null]
+}
+
+Table media_assets {
+  id uuid [pk, not null]
+  data bytea [not null]
+  mime_type text [not null]
+  file_size integer [not null]
+  created_at timestamptz [not null]
 }
 
 Table offers {
@@ -157,6 +170,7 @@ Table users {
   password_changed_at timestamptz
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
+  role UserRole [not null]
 }
 
 Table vehicles {
@@ -191,6 +205,7 @@ Ref: vehicles.user_id > users.id
 // appointments.appointment_values: CHECK (((starts_at < ends_at) AND (base_price >= (0)::numeric) AND (price >= (0)::numeric) AND (duration_minutes > 0)))
 // appointments.appointments_bay_no_overlap: EXCLUDE USING gist (bay_id WITH =, tstzrange(starts_at, ends_at, '[)'::text) WITH &&) WHERE ((status = ANY (ARRAY['PENDING'::"AppointmentStatus", 'CONFIRMED'::"AppointmentStatus"])))
 // business_hours.hours_values: CHECK ((((day_of_week >= 0) AND (day_of_week <= 6)) AND ((opens_at)::text ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text) AND ((closes_at)::text ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text) AND ((opens_at)::text < (closes_at)::text)))
+// media_assets.media_values: CHECK (((file_size > 0) AND (file_size <= 2097152) AND (octet_length(data) = file_size) AND (mime_type = ANY (ARRAY['image/jpeg'::text, 'image/png'::text, 'image/webp'::text]))))
 // offers.offer_values: CHECK (((starts_at < ends_at) AND (discount_value > (0)::numeric) AND ((discount_type <> 'PERCENTAGE'::"DiscountType") OR (discount_value <= (100)::numeric))))
 // package_items.package_item_values: CHECK (((quantity > 0) AND (package_id <> service_id)))
 // services.service_values: CHECK (((price >= (0)::numeric) AND (duration_minutes > 0) AND ((currency)::text = 'BDT'::text)))

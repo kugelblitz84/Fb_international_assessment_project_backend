@@ -8,9 +8,9 @@ All paths are relative to `/api/v1`. Requests use Zod; unknown booking fields su
 | POST | `/auth/register` | Public; 201 `{accessToken,user,csrfToken}` + cookie |
 | POST | `/auth/login` | Public; 200 same response + independent session cookie |
 | GET | `/auth/csrf` | Refresh cookie; `{csrfToken}` for browser restoration |
-| POST | `/auth/refresh` | Refresh cookie; 200 `{accessToken,csrfToken}` + rotated cookie |
+| POST | `/auth/refresh` | Refresh cookie; 200 `{accessToken,csrfToken,user}` + rotated cookie |
 | POST | `/auth/logout` | Refresh cookie; 204, revoke this session and clear cookie |
-| GET | `/auth/me` | Bearer; `{user:{id,name,email}}` |
+| GET | `/auth/me` | Bearer; `{user:{id,name,email,role}}` |
 | PATCH | `/users/me` | Bearer; name/email update, same user envelope |
 | GET | `/categories` | Public active categories |
 | GET | `/services` | Public active services/packages |
@@ -82,3 +82,5 @@ Limits: five/minute and twenty/hour for both IP and authenticated user, configur
 | 504 | `ASSISTANT_TIMEOUT` |
 
 No raw provider error, key or prompt is returned. Personal appointment queries are outside the assistant scope; it provides public instructions and directs users to My bookings. Specific slot questions are directed to the service booking page rather than fabricated times. [Implementation and privacy details](gemini-assistant.md).
+
+Admin endpoint contracts, image responses, role-aware auth responses and Flutter requirements are documented in [admin-api.md](admin-api.md). Public user objects now include `role: CUSTOMER | ADMIN`, including login, register, profile and refresh/session restoration. All existing public paths remain available.

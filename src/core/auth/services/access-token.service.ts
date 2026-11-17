@@ -20,7 +20,7 @@ export class AccessTokenService {
       .setJti(randomUUID())
       .sign(new TextEncoder().encode(this.config.auth.accessTokenSecret));
   }
-  async verify(token: string): Promise<AuthenticatedUser> {
+  async verify(token: string): Promise<Omit<AuthenticatedUser, 'role'>> {
     try {
       if (token.length > 4096) throw new Error();
       const { payload } = await jwtVerify(

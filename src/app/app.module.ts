@@ -1,3 +1,5 @@
+import { AdminModule } from '../features/admin/admin.module';
+import { MediaModule } from '../features/media/media.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '../core/config/config.module';
 import { PrismaModule } from '../core/database/prisma.module';
@@ -13,6 +15,8 @@ import { AssistantModule } from '../features/assistant/assistant.module';
 @Module({
   imports: [
     ConfigModule,
+    AdminModule,
+    MediaModule,
     PrismaModule,
     HealthModule,
     AuthModule,

@@ -55,3 +55,11 @@ Demo seed: five categories, six individual services, three packages, two introdu
 Add `GEMINI_API_KEY` to the local `.env`; the default configurable model is `gemini-3.5-flash-lite`. Without a key, only `/assistant/chat` is disabled (503). Set `ASSISTANT_DAILY_REQUEST_BUDGET` at or below the project's actual quota; the default 100 is a conservative application cap, not a claim about Google's free tier. No model fallback or automatic retries are used.
 
 `POST /api/v1/assistant/chat` accepts `{messages:[{role:"user",content:"Suggest a package under 2000 taka."}]}` for guests or authenticated users. It returns `{id,role:"assistant",text,actions}`. The Flutter integration uses live catalog UUIDs and cards; explicit demo mode remains available. Live Gemini verification is pending a configured key; fake-provider automated tests do not establish live availability.
+
+## Administration
+
+The additive admin module manages categories, individual services, packages, offers, persistent PostgreSQL images and appointment status. All admin endpoints require an active ADMIN session; public registration always creates CUSTOMER.
+
+Apply migrations with `npm run prisma:migrate:deploy`, configure `PUBLIC_API_BASE_URL` (including `/api/v1`) for uploads, and run `npm run admin:create`. The CLI prompts for name/email and a hidden password; no default administrator or public promotion endpoint exists. Existing users become CUSTOMER automatically. No database reset is required.
+
+See [complete admin contracts and Flutter handover](docs/admin-api.md) and [implementation/verification report](docs/admin-implementation-report.md).

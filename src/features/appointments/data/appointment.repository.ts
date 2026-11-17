@@ -86,6 +86,7 @@ export class AppointmentRepository {
     try {
       const row = await this.prisma.$transaction(async (tx) => {
         const now = new Date();
+        await tx.$queryRaw`SELECT id FROM services WHERE id = ${input.serviceId}::uuid FOR SHARE`;
         const service = await tx.service.findFirst({
           where: { id: input.serviceId, ...activeCatalog },
           include: CatalogRepository.bookingInclude,

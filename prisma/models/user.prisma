@@ -4,7 +4,13 @@ enum UserStatus {
   DELETED
 }
 
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
 model User {
+  role UserRole @default(CUSTOMER)
   id String @id @default(uuid()) @db.Uuid
   name String @db.VarChar(160)
   email String @unique @db.VarChar(320)

@@ -64,6 +64,7 @@ export class AuthController {
         tokens.refreshTokenExpiresAt,
       );
       return {
+        user: tokens.user,
         accessToken: tokens.accessToken,
         csrfToken: this.cookies.issueCsrfToken(tokens.sessionId),
       };

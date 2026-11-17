@@ -6,6 +6,7 @@ import type { AppConfig } from '../../config/app-config';
 import type {
   AuthenticatedUser,
   AuthTokenPair,
+  PublicUser,
   SessionMetadata,
 } from '../auth.types';
 import { AccessTokenService } from './access-token.service';
@@ -66,13 +67,25 @@ export class SessionService {
   async rotate(
     refreshToken: string,
     metadata: SessionMetadata = {},
-  ): Promise<AuthTokenPair> {
+  ): Promise<AuthTokenPair & { user: PublicUser }> {
     const sessionId = this.sessionIdFromRefreshToken(refreshToken);
     const digest = this.digest(refreshToken);
     const token = await this.prisma.authRefreshToken.findUnique({
       where: { digest },
       include: {
-        session: { include: { user: { select: { id: true, status: true } } } },
+        session: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                status: true,
+                name: true,
+                email: true,
+                role: true,
+              },
+            },
+          },
+        },
       },
     });
     if (!token || token.sessionId !== sessionId)
@@ -135,9 +148,15 @@ export class SessionService {
       accessToken,
       refreshToken: next,
       refreshTokenExpiresAt: session.expiresAt,
+      user: {
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email,
+        role: session.user.role,
+      },
     };
   }
-  async authenticateAccessToken(claims: AuthenticatedUser) {
+  async authenticateAccessToken(claims: Omit<AuthenticatedUser, 'role'>) {
     const session = await this.prisma.authSession.findFirst({
       where: {
         id: claims.sessionId,
@@ -146,10 +165,10 @@ export class SessionService {
         expiresAt: { gt: new Date() },
         user: { status: 'ACTIVE' },
       },
-      select: { id: true },
+      select: { id: true, user: { select: { role: true } } },
     });
     if (!session) throw new UnauthorizedException('Inactive session.');
-    return claims;
+    return { ...claims, role: session.user.role };
   }
   async revokeByRefreshToken(token: string) {
     const sessionId = this.sessionIdFromRefreshToken(token);

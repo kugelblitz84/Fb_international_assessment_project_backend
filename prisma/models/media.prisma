@@ -1,0 +1,8 @@
+model MediaAsset {
+ id String @id @default(uuid()) @db.Uuid
+ data Bytes @db.ByteA
+ mimeType String @map("mime_type")
+ fileSize Int @map("file_size")
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+ @@map("media_assets")
+}

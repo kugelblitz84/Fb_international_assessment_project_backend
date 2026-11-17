@@ -42,3 +42,14 @@ Forwarded IP headers are untrusted. Review proxy trust at deployment before chan
 | `ASSISTANT_MAX_CONCURRENT` | 2, range 1–10, per backend process |
 
 The daily default is an application limit, not a guaranteed free-tier quota. Check the project's actual limits/billing and choose a safe cap. SDK retries are disabled. Invalid credentials/unavailable model return a configuration error and never silently switch models. Optional configuration is not contacted at startup. Per-IP/user short-window rate limits and concurrency remain process-local; a replicated deployment should also enforce shared ingress limits. The daily budget itself survives restarts and is shared through PostgreSQL.
+
+## Administration and media
+
+| Variable | Default / requirement |
+|---|---|
+| `PUBLIC_API_BASE_URL` | No default; explicitly configured external API root including `/api/v1`, without trailing slash. HTTP(S); HTTPS required in production. Upload returns 503 when missing; public/catalog/auth continue working. Credentials, query and fragment are forbidden. |
+| `ADMIN_NAME` | CLI only; optional noninteractive provisioning name, same validation as registration |
+| `ADMIN_EMAIL` | CLI only; valid email, trimmed/lowercased; existing emails rejected |
+| `ADMIN_PASSWORD` | CLI only; 10�256 characters; no default; provide through a secret mechanism |
+
+Either supply all ADMIN_* variables or use the interactive hidden-password prompt. They never create accounts at application startup or during seeding. Uploaded image binaries persist in PostgreSQL, with a 2 MiB per-image limit independent of the JSON body limit. Provision database storage/backups accordingly. See [admin API](admin-api.md).

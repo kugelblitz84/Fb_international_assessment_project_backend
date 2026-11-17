@@ -5,13 +5,16 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../core/database/prisma.service';
-const publicSelect = { id: true, name: true, email: true } as const;
+const publicSelect = { role: true, id: true, name: true, email: true } as const;
 @Injectable()
 export class UserRepository {
   constructor(private readonly prisma: PrismaService) {}
   async create(data: { name: string; email: string; passwordHash: string }) {
     try {
-      return await this.prisma.user.create({ data, select: publicSelect });
+      return await this.prisma.user.create({
+        data: { ...data, role: 'CUSTOMER' },
+        select: publicSelect,
+      });
     } catch (error) {
       this.conflict(error);
     }
