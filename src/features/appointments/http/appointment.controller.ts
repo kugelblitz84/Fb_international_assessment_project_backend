@@ -60,7 +60,7 @@ export class AppointmentController {
   @Patch(':id/cancel') cancel(
     @CurrentUser() auth: AuthenticatedUser,
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body(new ZodValidationPipe(z.object({}).strict()))
+    @Body(new ZodValidationPipe(z.object({}).strict().default({})))
     _input: Record<string, never>,
     @Res({ passthrough: true }) response: Response,
   ) {

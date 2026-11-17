@@ -1,15 +1,11 @@
 import {
-  BadRequestException,
   ConflictException,
-  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Appointment } from '@prisma/client';
 import { PrismaService } from '../../../core/database/prisma.service';
-import { APP_CONFIG } from '../../../core/config/app-config';
-import type { AppConfig } from '../../../core/config/app-config';
 import {
   activeCatalog,
   catalogRecord,
@@ -20,8 +16,6 @@ import type {
   Money,
 } from '../../catalog/domain/catalog.types';
 import {
-  assertBookingDate,
-  insideBusinessHours,
   workshopDate,
   workshopTime,
   WORKSHOP_TIME_ZONE,
@@ -31,6 +25,7 @@ import type {
   AppointmentFilters,
   CreateAppointment,
 } from '../domain/appointment.types';
+import type { BookingSlot, OpeningInterval } from '../domain/booking-policy';
 function dto(row: Appointment): AppointmentDto {
   return {
     id: row.id,
@@ -77,16 +72,15 @@ export function isReservationConflict(error: unknown): boolean {
 }
 @Injectable()
 export class AppointmentRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-    @Inject(APP_CONFIG) private readonly config: AppConfig,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
   async reserve(
     userId: string,
     input: CreateAppointment,
     calculate: (
       service: CatalogServiceRecord,
       now: Date,
+      slot: BookingSlot,
+      hours: OpeningInterval[],
     ) => { price: Money; offer: { id: string } | null },
   ) {
     try {
@@ -107,25 +101,10 @@ export class AppointmentRepository {
         });
         if (!slot)
           throw new NotFoundException('Slot not found for this service.');
-        assertBookingDate(
-          workshopDate(slot.startsAt),
-          this.config.booking.horizonDays,
-          now,
-        );
-        if (
-          slot.startsAt <= now ||
-          slot.endsAt.getTime() - slot.startsAt.getTime() !==
-            service.durationMinutes * 60000
-        )
-          throw new BadRequestException('Slot is no longer bookable.');
         const dayOfWeek = new Date(
           `${workshopDate(slot.startsAt)}T00:00:00Z`,
         ).getUTCDay();
         const hours = await tx.businessHours.findMany({ where: { dayOfWeek } });
-        if (!insideBusinessHours(slot.startsAt, slot.endsAt, hours))
-          throw new BadRequestException(
-            'Slot is outside current business hours.',
-          );
         if (
           input.vehicleId &&
           !(await tx.vehicle.findFirst({
@@ -134,7 +113,7 @@ export class AppointmentRepository {
           }))
         )
           throw new NotFoundException('Vehicle not found.');
-        const pricing = calculate(catalogRecord(service), now);
+        const pricing = calculate(catalogRecord(service), now, slot, hours);
         // The exclusion constraint and partial unique index serialize conflicting inserts.
         return tx.appointment.create({
           data: {
