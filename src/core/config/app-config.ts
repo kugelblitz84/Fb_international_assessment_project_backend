@@ -11,6 +11,20 @@ export interface AppConfig {
   readonly databaseUrl: string;
   readonly corsOrigins: string[];
   readonly httpBodyLimitBytes: number;
+  readonly auth: {
+    readonly accessTokenSecret: string;
+    readonly accessTokenTtlSeconds: number;
+    readonly refreshTokenTtlSeconds: number;
+    readonly issuer: string;
+    readonly audience: string;
+    readonly cookieSameSite: 'lax' | 'strict' | 'none';
+    readonly cookieSecure: boolean;
+  };
+  readonly booking: {
+    readonly horizonDays: number;
+    readonly slotStepMinutes: number;
+    readonly timeZone: 'Asia/Dhaka';
+  };
 }
 
 function parseNodeEnvironment(value: string | undefined): NodeEnvironment {
@@ -104,11 +118,77 @@ export function loadAppConfig(
   environment: Environment = process.env,
 ): AppConfig {
   const nodeEnv = parseNodeEnvironment(environment.NODE_ENV);
+  const secret = environment.AUTH_ACCESS_TOKEN_SECRET?.trim();
+  if (
+    !secret ||
+    Buffer.byteLength(secret) < 32 ||
+    /replace|placeholder|change-me/i.test(secret)
+  ) {
+    throw new Error(
+      'AUTH_ACCESS_TOKEN_SECRET must be a non-placeholder secret of at least 32 bytes.',
+    );
+  }
+  const sameSite = environment.AUTH_COOKIE_SAME_SITE ?? 'lax';
+  if (!['lax', 'strict', 'none'].includes(sameSite))
+    throw new Error('Invalid AUTH_COOKIE_SAME_SITE.');
+  const secure =
+    environment.AUTH_COOKIE_SECURE ??
+    (nodeEnv === 'production' ? 'true' : 'false');
+  if (
+    !['true', 'false'].includes(secure) ||
+    (nodeEnv === 'production' && secure !== 'true') ||
+    (sameSite === 'none' && secure !== 'true')
+  )
+    throw new Error(
+      'Production and SameSite=None require AUTH_COOKIE_SECURE=true and HTTPS.',
+    );
+  const issuer = environment.AUTH_ISSUER?.trim() ?? 'autocare';
+  const audience = environment.AUTH_AUDIENCE?.trim() ?? 'autocare-api';
+  if (!issuer || !audience)
+    throw new Error('AUTH_ISSUER and AUTH_AUDIENCE cannot be empty.');
   return {
     nodeEnv,
     port: parseInteger('PORT', environment.PORT, 3000, 1, 65_535),
     databaseUrl: parseDatabaseUrl(environment.DATABASE_URL),
     corsOrigins: parseCorsOrigins(environment.CORS_ORIGINS, nodeEnv),
+    auth: {
+      accessTokenSecret: secret,
+      accessTokenTtlSeconds: parseInteger(
+        'AUTH_ACCESS_TOKEN_TTL_SECONDS',
+        environment.AUTH_ACCESS_TOKEN_TTL_SECONDS,
+        900,
+        60,
+        3600,
+      ),
+      refreshTokenTtlSeconds: parseInteger(
+        'AUTH_REFRESH_TOKEN_TTL_SECONDS',
+        environment.AUTH_REFRESH_TOKEN_TTL_SECONDS,
+        2592000,
+        3600,
+        7776000,
+      ),
+      issuer,
+      audience,
+      cookieSameSite: sameSite as 'lax' | 'strict' | 'none',
+      cookieSecure: secure === 'true',
+    },
+    booking: {
+      horizonDays: parseInteger(
+        'BOOKING_HORIZON_DAYS',
+        environment.BOOKING_HORIZON_DAYS,
+        30,
+        1,
+        90,
+      ),
+      slotStepMinutes: parseInteger(
+        'BOOKING_SLOT_STEP_MINUTES',
+        environment.BOOKING_SLOT_STEP_MINUTES,
+        15,
+        5,
+        120,
+      ),
+      timeZone: 'Asia/Dhaka',
+    },
     httpBodyLimitBytes: parseInteger(
       'HTTP_BODY_LIMIT_BYTES',
       environment.HTTP_BODY_LIMIT_BYTES,
