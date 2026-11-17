@@ -1,0 +1,32 @@
+model ServiceBay {
+  id String @id @default(uuid()) @db.Uuid
+  name String @unique
+  isActive Boolean @default(true) @map("is_active")
+  slots AppointmentSlot[]
+  appointments Appointment[]
+  @@map("service_bays")
+}
+model BusinessHours {
+  id String @id @default(uuid()) @db.Uuid
+  dayOfWeek Int @map("day_of_week")
+  opensAt String @map("opens_at") @db.VarChar(5)
+  closesAt String @map("closes_at") @db.VarChar(5)
+  isClosed Boolean @default(false) @map("is_closed")
+  @@unique([dayOfWeek, opensAt, closesAt])
+  @@map("business_hours")
+}
+model AppointmentSlot {
+  id String @id @default(uuid()) @db.Uuid
+  serviceId String @map("service_id") @db.Uuid
+  bayId String @map("bay_id") @db.Uuid
+  startsAt DateTime @map("starts_at") @db.Timestamptz
+  endsAt DateTime @map("ends_at") @db.Timestamptz
+  isActive Boolean @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  bay ServiceBay @relation(fields: [bayId], references: [id], onDelete: Restrict)
+  appointments Appointment[]
+  @@unique([serviceId, bayId, startsAt])
+  @@index([bayId, startsAt, endsAt])
+  @@map("appointment_slots")
+}

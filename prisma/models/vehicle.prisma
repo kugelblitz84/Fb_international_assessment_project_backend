@@ -1,0 +1,14 @@
+model Vehicle {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  make String
+  model String
+  year Int?
+  registrationNumber String? @map("registration_number")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  appointments Appointment[]
+  @@index([userId])
+  @@map("vehicles")
+}

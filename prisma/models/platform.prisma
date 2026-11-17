@@ -1,0 +1,6 @@
+model PlatformSetting {
+  key String @id
+  value Json
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  @@map("platform_settings")
+}
