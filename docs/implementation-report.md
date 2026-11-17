@@ -1,6 +1,6 @@
 # Prerequisite implementation report
 
-Implemented fourteen models across seven feature schema files, an initial migration and custom SQL constraints; digest-based sessions, rotating refresh history, scrypt passwords, JWT access/session guard and customer profiles; catalog/packages/offers and Decimal pricing; stable persisted availability, owner-scoped appointments with PostgreSQL capacity enforcement; public platform knowledge.
+Implemented thirteen models across seven feature schema files, an initial migration and custom SQL constraints; digest-based sessions, rotating refresh history, scrypt passwords, JWT access/session guard and customer profiles; catalog/packages/offers and Decimal pricing; stable persisted availability, owner-scoped appointments with PostgreSQL capacity enforcement; public platform knowledge.
 
 Files: `prisma/models/*`, `prisma/migrations/*`, seed/config/data; `src/core/auth/*`; `src/features/auth`, `catalog`, `scheduling`, `appointments`, `platform`; typed config, app composition, public health annotation, environment/scripts/build config; `test/*`, `test/integration/*`, `scripts/*`; README and docs. The frontend was read only during this phase.
 

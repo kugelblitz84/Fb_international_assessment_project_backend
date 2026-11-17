@@ -19,6 +19,7 @@ All paths are relative to `/api/v1`. Requests use Zod; unknown booking fields su
 | GET | `/offers/:id` | Public eligible offer or 404 |
 | GET | `/services/:id/availability?date=YYYY-MM-DD` | Public persisted slot availability |
 | GET | `/platform` | Public `{settings,businessHours}` |
+| POST | `/assistant/chat` | Optional bearer; public information only, 200 structured assistant message |
 | POST | `/appointments` | Bearer; 201 Appointment DTO |
 | GET | `/appointments` | Bearer; owned Appointment DTO array |
 | GET | `/appointments/:id` | Bearer; owned Appointment DTO |
@@ -61,3 +62,23 @@ Snapshots retain charged prices and names after catalog changes. No public endpo
 400 invalid input/date/window; 401 credentials/session/token; 403 origin/CSRF; 404 missing/non-owned/inactive resource; 409 duplicate email/capacity conflict/non-pending cancellation; 429 throttling; 500 unexpected failure. NestJS error envelopes are used. Validation adds `code:VALIDATION_ERROR` and field `violations`, without submitted values.
 
 Generated examples: [catalog](examples/catalog.json), [availability](examples/availability.json), [appointment](examples/appointment.json), [platform](examples/platform.json). IDs/timestamps belong to the isolated verification database, not every deployment.
+
+## Gemini assistant
+
+Request: `{ "messages": [{ "role": "user", "content": "Suggest a package under 2000 taka." }] }`. Allowed roles are user/assistant, final role must be user. Each trimmed message is 1–2000 characters, at most twelve messages and 12,000 total characters; unknown fields/system messages are rejected. Client assistant-role history is also untrusted. No history is persisted.
+
+Response: `{ "id":"<server UUID>", "role":"assistant", "text":"...", "actions":[{"type":"serviceDetails","serviceId":"<active service/package UUID>"},{"type":"browseServices","categoryId":"<optional active category UUID>"}] }`. Extra/inappropriate action fields, arbitrary routes/URLs, invented/inactive IDs and unknown types are rejected. Duplicate actions are removed, at most four returned. Every action and exact price is checked against refreshed public data after generation. Price/duration lines are server-generated, replacing detected numeric/monetary/time/link claims in model text.
+
+Limits: five/minute and twenty/hour for both IP and authenticated user, configurable. Maximum two concurrent requests per process. The configurable global daily budget defaults to 100 and is enforced atomically in PostgreSQL across instances, resetting at UTC midnight. All admitted attempts count, even failures; retries are manual. The default cap must be checked against the actual provider quota. Responses, including route errors, use no-store.
+
+| Status | Assistant code |
+|---|---|
+| 400 | `ASSISTANT_SENSITIVE_INPUT` or standard `VALIDATION_ERROR` |
+| 401 | Invalid supplied optional bearer token/session |
+| 422 | `ASSISTANT_BLOCKED` |
+| 429 | `ASSISTANT_RATE_LIMITED`, `ASSISTANT_BUSY`, `ASSISTANT_DAILY_LIMIT`, `ASSISTANT_QUOTA_EXHAUSTED` |
+| 502 | `ASSISTANT_PROVIDER_ERROR`, `ASSISTANT_EMPTY_RESPONSE`, `ASSISTANT_INVALID_RESPONSE` |
+| 503 | `ASSISTANT_DISABLED`, `ASSISTANT_CONFIGURATION_ERROR`, `ASSISTANT_CONTEXT_TOO_LARGE` |
+| 504 | `ASSISTANT_TIMEOUT` |
+
+No raw provider error, key or prompt is returned. Personal appointment queries are outside the assistant scope; it provides public instructions and directs users to My bookings. Specific slot questions are directed to the service booking page rather than fabricated times. [Implementation and privacy details](gemini-assistant.md).

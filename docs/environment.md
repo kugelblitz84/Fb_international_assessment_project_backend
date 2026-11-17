@@ -27,3 +27,18 @@ Generate a secret: `node -e "console.log(require('crypto').randomBytes(48).toStr
 Use `AUTH_COOKIE_SECURE=false` only for local HTTP development. Production must override the example's false value. Cookies use `refresh_token` over HTTP development and `__Secure-refresh_token` with HTTPS; no Domain attribute, path `/api/v1/auth`. CORS alone does not prevent CSRF: trusted browsers also send the session-bound CSRF token for refresh/logout.
 
 Forwarded IP headers are untrusted. Review proxy trust at deployment before changing it. Authentication throttling is bounded in-memory, per process and direct client IP: 20 credential attempts and 60 refresh attempts per 15 minutes. Multiple replicas require shared rate limiting outside this assessment.
+
+## Optional Gemini configuration
+
+| Variable | Default / requirement |
+|---|---|
+| `GEMINI_API_KEY` | Blank disables assistant only; supply manually in `.env`, never Flutter |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite`; no fallback to another model |
+| `GEMINI_TIMEOUT_MS` | 20000, range 1000–60000 |
+| `GEMINI_MAX_OUTPUT_TOKENS` | 1500, range 128–4096 |
+| `ASSISTANT_REQUESTS_PER_MINUTE` | 5, range 1–60, per IP and authenticated user |
+| `ASSISTANT_REQUESTS_PER_HOUR` | 20, range 1–1000, per IP and authenticated user |
+| `ASSISTANT_DAILY_REQUEST_BUDGET` | 100, range 0–10000; 0 prevents admitted requests. PostgreSQL shared global cap, UTC calendar day |
+| `ASSISTANT_MAX_CONCURRENT` | 2, range 1–10, per backend process |
+
+The daily default is an application limit, not a guaranteed free-tier quota. Check the project's actual limits/billing and choose a safe cap. SDK retries are disabled. Invalid credentials/unavailable model return a configuration error and never silently switch models. Optional configuration is not contacted at startup. Per-IP/user short-window rate limits and concurrency remain process-local; a replicated deployment should also enforce shared ingress limits. The daily budget itself survives restarts and is shared through PostgreSQL.

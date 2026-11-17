@@ -14,6 +14,7 @@ Features separate domain contracts/rules, Prisma data implementations, applicati
 | `features/scheduling` | Dhaka time, business-hour intervals, persisted slots and reservation reads |
 | `features/appointments` | Booking policy, transactional reservation/snapshots, owner-scoped reads/cancellation |
 | `features/platform` | Public policy JSON and authoritative business hours |
+| `features/assistant` | Public context, replaceable Gemini provider, strict structured actions, request limits and PostgreSQL daily budget |
 
 Booking uses one transactional data operation. It loads the active service/category/package components, slot, hours and optional owned vehicle; an application callback validates booking policy and calculates the price. PostgreSQL's exclusion constraint and partial unique index enforce capacity under concurrency. Conflict SQLSTATEs become HTTP 409.
 
@@ -27,4 +28,4 @@ Access authorization queries PostgreSQL on every request for session ownership, 
 - [Authentication reference](https://github.com/kugelblitz84/edu_app_backend/tree/002711b1219b2bf4f64754a1c78f2c13a9b3c7ad): inspected user/session/history models, session/access-token/cookie services, guard, controller, module, README, register/login use cases and scrypt services. Educational roles, institutions and unrelated features were omitted. AutoCare adds rollback on failed rotation, direct database session checks and HTTP-compatible native development cookies.
 - The adjacent [Flutter repository](https://github.com/kugelblitz84/assessment_project_fb_international_frontend) was read without modification: `demo_workshop.dart`, service/appointment/availability models, CreateBookingPayload, routes, catalog/appointment adapters, auth repository, native/web cookie transports. BookingStatus requires lowercase strings; authentication expects `{accessToken,user}` and `{user}` for `/auth/me`.
 
-No Gemini integration, chat storage, vector database, admin workflow, payment flow, notifications, staff system or vendor abstraction was added.
+The subsequent Gemini feature injects CatalogService and PlatformService, never private appointment/user repositories. AssistantContextService builds bounded public JSON; GeminiService uses the official SDK with a separate system instruction and model-role mapping; AssistantService validates output and refreshes authoritative data before returning actions/prices. The provider contract can be replaced by a fake in tests. AssistantBudgetRepository atomically counts daily requests under reserved internal PlatformSetting keys, excluded from public knowledge. No chat storage, vector database, admin workflow, payment flow, notifications, staff system or vendor abstraction was added.

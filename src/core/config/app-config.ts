@@ -11,6 +11,16 @@ export interface AppConfig {
   readonly databaseUrl: string;
   readonly corsOrigins: string[];
   readonly httpBodyLimitBytes: number;
+  readonly gemini: {
+    readonly apiKey?: string;
+    readonly model: string;
+    readonly timeoutMs: number;
+    readonly maxOutputTokens: number;
+    readonly perMinute: number;
+    readonly perHour: number;
+    readonly dailyBudget: number;
+    readonly maxConcurrent: number;
+  };
   readonly auth: {
     readonly accessTokenSecret: string;
     readonly accessTokenTtlSeconds: number;
@@ -148,6 +158,52 @@ export function loadAppConfig(
     throw new Error('AUTH_ISSUER and AUTH_AUDIENCE cannot be empty.');
   return {
     nodeEnv,
+    gemini: {
+      apiKey: environment.GEMINI_API_KEY?.trim() || undefined,
+      model: environment.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite',
+      timeoutMs: parseInteger(
+        'GEMINI_TIMEOUT_MS',
+        environment.GEMINI_TIMEOUT_MS,
+        20000,
+        1000,
+        60000,
+      ),
+      maxOutputTokens: parseInteger(
+        'GEMINI_MAX_OUTPUT_TOKENS',
+        environment.GEMINI_MAX_OUTPUT_TOKENS,
+        1500,
+        128,
+        4096,
+      ),
+      perMinute: parseInteger(
+        'ASSISTANT_REQUESTS_PER_MINUTE',
+        environment.ASSISTANT_REQUESTS_PER_MINUTE,
+        5,
+        1,
+        60,
+      ),
+      perHour: parseInteger(
+        'ASSISTANT_REQUESTS_PER_HOUR',
+        environment.ASSISTANT_REQUESTS_PER_HOUR,
+        20,
+        1,
+        1000,
+      ),
+      dailyBudget: parseInteger(
+        'ASSISTANT_DAILY_REQUEST_BUDGET',
+        environment.ASSISTANT_DAILY_REQUEST_BUDGET,
+        100,
+        0,
+        10000,
+      ),
+      maxConcurrent: parseInteger(
+        'ASSISTANT_MAX_CONCURRENT',
+        environment.ASSISTANT_MAX_CONCURRENT,
+        2,
+        1,
+        10,
+      ),
+    },
     port: parseInteger('PORT', environment.PORT, 3000, 1, 65_535),
     databaseUrl: parseDatabaseUrl(environment.DATABASE_URL),
     corsOrigins: parseCorsOrigins(environment.CORS_ORIGINS, nodeEnv),

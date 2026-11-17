@@ -7,6 +7,7 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { json, urlencoded } from 'express';
 import type { ErrorRequestHandler } from 'express';
+import type { RequestHandler } from 'express';
 import helmet from 'helmet';
 import { APP_CONFIG } from '../core/config/app-config';
 import type { AppConfig } from '../core/config/app-config';
@@ -39,6 +40,11 @@ export function configureApp(app: NestExpressApplication): void {
   // Forwarded headers are untrusted until deployment explicitly configures a proxy.
   app.set('trust proxy', false);
   app.disable('x-powered-by');
+  const assistantNoStore: RequestHandler = (_request, response, next) => {
+    response.setHeader('Cache-Control', 'no-store');
+    next();
+  };
+  app.use('/api/v1/assistant', assistantNoStore);
   app.use(
     helmet({
       strictTransportSecurity:

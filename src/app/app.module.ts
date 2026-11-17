@@ -8,6 +8,7 @@ import { CatalogModule } from '../features/catalog/catalog.module';
 import { SchedulingModule } from '../features/scheduling/scheduling.module';
 import { AppointmentsModule } from '../features/appointments/appointments.module';
 import { PlatformModule } from '../features/platform/platform.module';
+import { AssistantModule } from '../features/assistant/assistant.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PlatformModule } from '../features/platform/platform.module';
     SchedulingModule,
     AppointmentsModule,
     PlatformModule,
+    AssistantModule,
   ],
 })
 export class AppModule {}

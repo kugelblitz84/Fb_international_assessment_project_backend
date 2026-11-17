@@ -1,6 +1,6 @@
 # AutoCare backend
 
-NestJS 11, PostgreSQL, Prisma 7.10.1 and Zod 4 REST API for vehicle service discovery and customer appointments. Includes authentication, services, packages, offers, persisted availability and private bookings. No AI SDK or assistant endpoint is implemented.
+NestJS 11, PostgreSQL, Prisma 7.10.1 and Zod 4 REST API for vehicle service discovery and customer appointments. Includes authentication, services, packages, offers, persisted availability, private bookings and a grounded Gemini assistant with structured recommendations.
 
 ## Run locally
 
@@ -44,6 +44,14 @@ Integration tests skip when `TEST_DATABASE_URL` is absent. They create and clean
 - [Required Flutter integration work](docs/flutter-integration.md)
 - [Future AI service contracts and privacy](docs/ai-assistant-prerequisites.md)
 - [Implementation and verification report](docs/implementation-report.md)
+- [Gemini integration, privacy, limits and verification](docs/gemini-assistant.md)
+- [Gemini delivery report](docs/gemini-implementation-report.md)
 - [Generated JSON examples](docs/examples/)
 
 Demo seed: five categories, six individual services, three packages, two introductory offers, two bays, fourteen opening intervals and ten public settings. Existing seed rows are preserved on rerun, including offer expiration dates. No users, passwords or appointments are seeded.
+
+## Gemini assistant
+
+Add `GEMINI_API_KEY` to the local `.env`; the default configurable model is `gemini-3.5-flash-lite`. Without a key, only `/assistant/chat` is disabled (503). Set `ASSISTANT_DAILY_REQUEST_BUDGET` at or below the project's actual quota; the default 100 is a conservative application cap, not a claim about Google's free tier. No model fallback or automatic retries are used.
+
+`POST /api/v1/assistant/chat` accepts `{messages:[{role:"user",content:"Suggest a package under 2000 taka."}]}` for guests or authenticated users. It returns `{id,role:"assistant",text,actions}`. The Flutter integration uses live catalog UUIDs and cards; explicit demo mode remains available. Live Gemini verification is pending a configured key; fake-provider automated tests do not establish live availability.

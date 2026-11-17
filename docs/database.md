@@ -37,7 +37,7 @@ erDiagram
 
 ## Migrations
 
-1. `202611170001_initial`: fourteen tables, four enums, relations, indexes and keys.
+1. `202611170001_initial`: thirteen tables, four enums, relations, indexes and keys.
 2. `202611170002_business_constraints`: SQL enabling `btree_gist`, normalized email, positive durations/quantities, price/discount checks, ordered intervals and valid hours. Package triggers prevent self/nested/non-individual contents and prevent changing composed service types.
 
 `appointments_bay_no_overlap` combines `bay_id =` with `tstzrange(starts_at,ends_at,'[)') &&`, for `PENDING` and `CONFIRMED`. A partial unique index on `slot_id` has the same active-status predicate. Cancelled/completed appointments remain history but release capacity. Adjacent intervals are allowed. Slots for different services may overlap; appointments may not occupy the same bay concurrently.
@@ -67,3 +67,5 @@ Flutter descriptions, inclusions and available Unsplash URLs are preserved in `p
 Two bays operate every day, 09:00–12:00 and 13:00–18:00 Asia/Dhaka, including Friday. `dayOfWeek` is 0=Sunday through 6=Saturday; local times use `HH:mm`. Separate intervals represent breaks. The afternoon accommodates the 210-minute premium package.
 
 Availability generates requested dates on demand within a rolling window (default: today plus 29 days), at 15-minute increments. Slots persist with `(serviceId,bayId,startsAt)` uniqueness and stable IDs. Past slots remain; no `isBooked` flag or scheduled cleanup exists. Closed intervals, disabled bays, stale durations, times outside hours and past starts are excluded. The single-workshop implementation uses Asia/Dhaka's UTC+06:00 conversion.
+
+The Gemini integration adds no tables. It uses reserved `PlatformSetting` keys `internal:assistant:requests:YYYY-MM-DD` with `{ "count": number }` for atomic shared daily usage limits. These keys are excluded from the public allowlist and provider prompts. They count requests only, never chat content, profiles or tokens. Do not edit active-day counters; old counters can be archived by an operator after their UTC day.

@@ -1,0 +1,14 @@
+{
+  "id": "c73515dc-0049-4817-9f32-872d867ecda5",
+  "role": "assistant",
+  "text": "Compare this existing package in the catalog.\n\nExpress Car Care: BDT 1400.00; 105 minutes.",
+  "actions": [
+    {
+      "type": "serviceDetails",
+      "serviceId": "1b9f524c-8ff3-44ef-849d-f6c09d67f07d"
+    },
+    {
+      "type": "browseServices"
+    }
+  ]
+}
