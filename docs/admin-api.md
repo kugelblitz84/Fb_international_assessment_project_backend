@@ -122,15 +122,15 @@ AdminOffer response is `{id,serviceId,title,description,discountType,discountVal
 
 ## Image upload and retrieval
 
-Set `PUBLIC_API_BASE_URL` to the externally reachable API root, including `/api/v1`, for example `https://api.your-domain.example/api/v1`. Production requires HTTPS. It is configuration, never derived from a request Host header. When unset the app can start, but upload returns 503.
+Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET together; CLOUDINARY_FOLDER defaults to autocare. Completely missing credentials leave the app running and return 503 MEDIA_DISABLED for new uploads. Partial credentials fail startup. PUBLIC_API_BASE_URL is used for online checkout callbacks and is not required for Cloudinary uploads. See [Cloudinary setup](cloudinary-integration.md).
 
-Upload multipart/form-data with exactly one part named `file`, maximum 2097152 bytes (2 MiB), and the bearer header. Let the HTTP library set the multipart boundary; do not manually set a bare Content-Type header. No other form fields are accepted. JPEG, PNG and WebP signatures are verified from bytes; filename and client MIME are untrusted. SVG, executable signatures, empty/unknown content and oversized files fail. Images persist in PostgreSQL bytea with UUID, verified MIME, size and createdAt. Upload JSON contains only `{id,imageUrl}`; binary bytes never appear in catalog or upload JSON.
+Upload multipart/form-data with exactly one part named `file`, maximum 2097152 bytes (2 MiB), and the bearer header. Let the HTTP library set the multipart boundary; do not manually set a bare Content-Type header. No other form fields are accepted. JPEG, PNG and WebP signatures are verified from bytes; filename and client MIME are untrusted. SVG, executable signatures, empty/unknown content and oversized files fail. New images upload through the authenticated Cloudinary SDK; PostgreSQL stores metadata only. Upload JSON contains exactly `{id,imageUrl}` with a direct HTTPS Cloudinary delivery URL. Binary bytes never appear in catalog or upload JSON.
 
 ```sh
 curl -H "Authorization: Bearer $ACCESS_TOKEN" -F "file=@photo.png" https://api.your-domain.example/api/v1/admin/media/images
 ```
 
-The public GET requires no token and returns binary, verified Content-Type, Content-Length, `Cache-Control: public, max-age=31536000, immutable`, `X-Content-Type-Options: nosniff`, and cross-origin resource policy permitting image embedding. Unknown UUID returns 404; malformed UUID 400. Uploads are immutable, with no replacement/deletion endpoint. Persist the returned imageUrl in a category/service PATCH. Existing external HTTP(S) image URLs remain supported. No media processing, metadata removal or content moderation is performed.
+The legacy public GET requires no token and returns existing PostgreSQL bytes, verified Content-Type, Content-Length, `Cache-Control: public, max-age=31536000, immutable`, `X-Content-Type-Options: nosniff`, and cross-origin resource policy permitting image embedding. Missing legacy bytes/unknown UUID return 404; malformed UUID 400. New uploads use the returned Cloudinary URL directly. Persist imageUrl in a category/service PATCH. Existing external URLs remain supported. Replacing an image reference never deletes an existing asset; no deletion/library endpoint is provided. Cloudinary delivery uses automatic format and perceptual quality optimization while retaining the original.
 
 ## Appointments
 
@@ -159,7 +159,9 @@ PATCH status body is exactly `{"status":"confirmed"}`, `{"status":"cancelled"}` 
 | confirmed | completed | endsAt <= current server time |
 | completed/cancelled | None | Terminal |
 
-Updates condition on the previously observed status inside a transaction. A concurrent change to that status causes 409; two requests that execute sequentially may both succeed when both transitions form a valid sequence. Invalid transitions and premature completion return 409; unknown appointment 404. Cancellation/completion release capacity through existing partial unique/exclusion constraints, without deleting slots. Customer endpoints remain ownership-scoped and only allow their existing PENDING cancellation behavior. No rescheduling or notifications are added.
+Updates lock the appointment row and condition on the previously observed status inside a transaction. Invalid transitions and premature completion return 409; unknown appointment 404. Payment checks use the same lock as initiation/validation. Cancellation is blocked for applied, initiating, pending or review-required payments; REVIEW_REQUIRED also blocks confirmation/completion. Ordinary unpaid customer PENDING cancellation remains available. Paid confirmation/completion remain normal administrative actions. Cancellation/completion release capacity through existing partial unique/exclusion constraints without deleting slots. Paid cancellation/refund cases require manual support; no automatic refund or rescheduling is added.
+
+Admin appointment DTOs add paymentStatus (unpaid|pending|paid|review_required), paymentMethod (sslcommerz|null), canPayOnline and canCancel. Payment attempt details are separate protected endpoints: GET /admin/payments, GET /admin/payments/:id and POST /admin/payments/:id/reconcile. Status/date filters, exact DTOs, reason codes and manual support rules are specified in [payment API](payment-api.md).
 
 ## Dashboard
 

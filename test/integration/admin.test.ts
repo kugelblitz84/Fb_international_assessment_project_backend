@@ -12,6 +12,7 @@ import { configureApp } from '../../src/app/bootstrap';
 import { PrismaService } from '../../src/core/database/prisma.service';
 import { workshopDate } from '../../src/features/scheduling/domain/workshop-time';
 import { AvailabilityService } from '../../src/features/scheduling/application/availability.service';
+import { CloudinaryService } from '../../src/features/media/cloudinary.service';
 
 test(
   'admin authorization, catalog, packages, offers, media and atomic appointment transitions',
@@ -26,6 +27,7 @@ test(
       logger: false,
     });
     configureApp(app);
+    app.get(CloudinaryService).upload = async (_data, id) => ({ publicId: 'autocare/' + id, secureUrl: 'https://res.cloudinary.com/test/image/upload/' + id + '.png' });
     await app.listen(0, '127.0.0.1');
     const db = app.get(PrismaService),
       base = (await app.getUrl()) + '/api/v1';
@@ -293,9 +295,14 @@ test(
       ids.media = media.id;
       assert.equal(
         media.imageUrl,
-        'https://api.example.invalid/api/v1/media/images/' + ids.media,
+        'https://res.cloudinary.com/test/image/upload/' + ids.media + '.png',
       );
       assert.deepEqual(Object.keys(media).sort(), ['id', 'imageUrl']);
+      const stored = await db.mediaAsset.findUniqueOrThrow({ where: { id: ids.media } });
+      assert.equal(stored.data, null);
+      assert.equal(stored.storageProvider, 'CLOUDINARY');
+      // Existing bytea images remain readable independently of new cloud uploads.
+      await db.mediaAsset.update({ where: { id: ids.media }, data: { storageProvider: 'POSTGRESQL', data: png, cloudinaryPublicId: null, cloudinarySecureUrl: null } });
       const image = await req(
         '/media/images/' + ids.media,
         undefined,

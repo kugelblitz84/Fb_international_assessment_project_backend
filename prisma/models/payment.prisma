@@ -1,0 +1,36 @@
+enum PaymentProvider {
+  SSLCOMMERZ
+}
+enum PaymentStatus {
+  INITIATING
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  EXPIRED
+  REVIEW_REQUIRED
+}
+model Payment {
+  id String @id @default(uuid()) @db.Uuid
+  appointmentId String @map("appointment_id") @db.Uuid
+  provider PaymentProvider @default(SSLCOMMERZ)
+  merchantTransactionId String @unique @map("merchant_transaction_id") @db.VarChar(30)
+  amount Decimal @db.Decimal(12,2)
+  currency String @default("BDT") @db.VarChar(3)
+  status PaymentStatus @default(INITIATING)
+  sessionKey String? @map("session_key")
+  checkoutUrl String? @map("checkout_url")
+  validationId String? @unique @map("validation_id") @db.VarChar(50)
+  bankTransactionId String? @unique @map("bank_transaction_id") @db.VarChar(80)
+  failureReason String? @map("failure_reason")
+  paidAt DateTime? @map("paid_at") @db.Timestamptz
+  applied Boolean @default(false)
+  gatewayIncidents Json @default("[]") @map("gateway_incidents")
+  lastReconciledAt DateTime? @map("last_reconciled_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+  @@index([appointmentId, createdAt])
+  @@index([status, createdAt])
+  @@map("payments")
+}

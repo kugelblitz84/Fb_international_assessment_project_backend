@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PaymentsModule } from '../payments/payments.module';
 import { PrismaModule } from '../../core/database/prisma.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { AdminDashboardService } from './application/admin-dashboard.service';
@@ -12,7 +13,7 @@ import { AdminOfferController } from './http/admin-offer.controller';
 import { AdminAppointmentService } from './application/admin-appointment.service';
 import { AdminAppointmentController } from './http/admin-appointment.controller';
 @Module({
-  imports: [PrismaModule, CatalogModule],
+  imports: [PrismaModule, CatalogModule, PaymentsModule],
   providers: [
     AdminDashboardService,
     AdminCategoryService,

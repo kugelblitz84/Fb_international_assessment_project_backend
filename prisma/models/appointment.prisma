@@ -29,6 +29,7 @@ model Appointment {
   vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
   bay ServiceBay @relation(fields: [bayId], references: [id], onDelete: Restrict)
   appliedOffer Offer? @relation(fields: [appliedOfferId], references: [id], onDelete: Restrict)
+  payments Payment[]
   @@index([userId, startsAt])
   @@index([serviceId])
   @@index([slotId])

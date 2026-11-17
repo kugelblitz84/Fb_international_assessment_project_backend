@@ -38,13 +38,20 @@ export function configureApp(app: NestExpressApplication): void {
   const config = app.get<AppConfig>(APP_CONFIG);
 
   // Forwarded headers are untrusted until deployment explicitly configures a proxy.
-  app.set('trust proxy', false);
+  app.set(
+    'trust proxy',
+    config.trustedProxies.length ? config.trustedProxies : false,
+  );
   app.disable('x-powered-by');
   const assistantNoStore: RequestHandler = (_request, response, next) => {
     response.setHeader('Cache-Control', 'no-store');
     next();
   };
   app.use('/api/v1/assistant', assistantNoStore);
+  app.use('/api/v1/payments', assistantNoStore);
+  app.use('/api/v1/admin/payments', assistantNoStore);
+  app.use('/api/v1/appointments', assistantNoStore);
+  app.use('/api/v1/admin/appointments', assistantNoStore);
   app.use(
     helmet({
       strictTransportSecurity:

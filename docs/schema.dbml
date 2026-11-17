@@ -11,6 +11,25 @@ Enum DiscountType {
   FIXED_AMOUNT
 }
 
+Enum MediaStorageProvider {
+  POSTGRESQL
+  CLOUDINARY
+}
+
+Enum PaymentProvider {
+  SSLCOMMERZ
+}
+
+Enum PaymentStatus {
+  INITIATING
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  EXPIRED
+  REVIEW_REQUIRED
+}
+
 Enum ServiceType {
   INDIVIDUAL
   PACKAGE
@@ -68,7 +87,7 @@ Table auth_refresh_tokens {
 Table auth_sessions {
   id uuid [pk, not null]
   user_id uuid [not null]
-  refresh_token_digest varchar(64) [not null]
+  refresh_token_digest varchar(64) [unique, not null]
   expires_at timestamptz [not null]
   revoked_at timestamptz
   created_at timestamptz [not null]
@@ -88,10 +107,13 @@ Table business_hours {
 
 Table media_assets {
   id uuid [pk, not null]
-  data bytea [not null]
+  data bytea
   mime_type text [not null]
   file_size integer [not null]
   created_at timestamptz [not null]
+  storage_provider MediaStorageProvider [not null]
+  cloudinary_public_id text [unique]
+  cloudinary_secure_url text
 }
 
 Table offers {
@@ -117,6 +139,27 @@ Table package_items {
   }
 }
 
+Table payments {
+  id uuid [pk, not null]
+  appointment_id uuid [not null]
+  provider PaymentProvider [not null]
+  merchant_transaction_id varchar(30) [unique, not null]
+  amount decimal(12,2) [not null]
+  currency varchar(3) [not null]
+  status PaymentStatus [not null]
+  session_key text
+  checkout_url text
+  validation_id varchar(50) [unique]
+  bank_transaction_id varchar(80) [unique]
+  failure_reason text
+  paid_at timestamptz
+  applied boolean [not null]
+  gateway_incidents jsonb [not null]
+  last_reconciled_at timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
 Table platform_settings {
   key text [pk, not null]
   value jsonb [not null]
@@ -125,14 +168,14 @@ Table platform_settings {
 
 Table service_bays {
   id uuid [pk, not null]
-  name text [not null]
+  name text [unique, not null]
   is_active boolean [not null]
 }
 
 Table service_categories {
   id uuid [pk, not null]
   name text [not null]
-  slug text [not null]
+  slug text [unique, not null]
   description text
   image_url text
   is_active boolean [not null]
@@ -146,7 +189,7 @@ Table services {
   category_id uuid [not null]
   type ServiceType [not null]
   name text [not null]
-  slug text [not null]
+  slug text [unique, not null]
   description text [not null]
   price decimal(12,2) [not null]
   currency varchar(3) [not null]
@@ -163,7 +206,7 @@ Table services {
 Table users {
   id uuid [pk, not null]
   name varchar(160) [not null]
-  email varchar(320) [not null]
+  email varchar(320) [unique, not null]
   password_hash text [not null]
   status UserStatus [not null]
   last_login_at timestamptz
@@ -197,6 +240,7 @@ Ref: auth_sessions.user_id > users.id
 Ref: offers.service_id > services.id
 Ref: package_items.package_id > services.id
 Ref: package_items.service_id > services.id
+Ref: payments.appointment_id > appointments.id
 Ref: services.category_id > service_categories.id
 Ref: vehicles.user_id > users.id
 
@@ -205,9 +249,59 @@ Ref: vehicles.user_id > users.id
 // appointments.appointment_values: CHECK (((starts_at < ends_at) AND (base_price >= (0)::numeric) AND (price >= (0)::numeric) AND (duration_minutes > 0)))
 // appointments.appointments_bay_no_overlap: EXCLUDE USING gist (bay_id WITH =, tstzrange(starts_at, ends_at, '[)'::text) WITH &&) WHERE ((status = ANY (ARRAY['PENDING'::"AppointmentStatus", 'CONFIRMED'::"AppointmentStatus"])))
 // business_hours.hours_values: CHECK ((((day_of_week >= 0) AND (day_of_week <= 6)) AND ((opens_at)::text ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text) AND ((closes_at)::text ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text) AND ((opens_at)::text < (closes_at)::text)))
-// media_assets.media_values: CHECK (((file_size > 0) AND (file_size <= 2097152) AND (octet_length(data) = file_size) AND (mime_type = ANY (ARRAY['image/jpeg'::text, 'image/png'::text, 'image/webp'::text]))))
+// media_assets.media_values: CHECK (((file_size > 0) AND (file_size <= 2097152) AND (mime_type = ANY (ARRAY['image/jpeg'::text, 'image/png'::text, 'image/webp'::text])) AND (((storage_provider = 'POSTGRESQL'::"MediaStorageProvider") AND (data IS NOT NULL) AND (octet_length(data) = file_size) AND (cloudinary_public_id IS NULL) AND (cloudinary_secure_url IS NULL)) OR ((storage_provider = 'CLOUDINARY'::"MediaStorageProvider") AND (data IS NULL) AND (cloudinary_public_id IS NOT NULL) AND (cloudinary_secure_url IS NOT NULL) AND (cloudinary_secure_url ~~ 'https://%'::text)))))
 // offers.offer_values: CHECK (((starts_at < ends_at) AND (discount_value > (0)::numeric) AND ((discount_type <> 'PERCENTAGE'::"DiscountType") OR (discount_value <= (100)::numeric))))
 // package_items.package_item_values: CHECK (((quantity > 0) AND (package_id <> service_id)))
+// payments.payment_applied: CHECK (((NOT applied) OR ((status = ANY (ARRAY['PAID'::"PaymentStatus", 'REVIEW_REQUIRED'::"PaymentStatus"])) AND (paid_at IS NOT NULL) AND (validation_id IS NOT NULL) AND (bank_transaction_id IS NOT NULL))))
+// payments.payment_paid: CHECK (((status <> 'PAID'::"PaymentStatus") OR applied))
+// payments.payment_values: CHECK (((amount >= (10)::numeric) AND (amount <= (500000)::numeric) AND ((currency)::text = 'BDT'::text)))
 // services.service_values: CHECK (((price >= (0)::numeric) AND (duration_minutes > 0) AND ((currency)::text = 'BDT'::text)))
 // users.normalized_email: CHECK (((email)::text = lower(btrim((email)::text))))
 // appointments_active_slot: unique slot_id WHERE status IN (PENDING, CONFIRMED)
+// PostgreSQL indexes (including partial uniqueness predicates):
+// CREATE INDEX appointment_slots_bay_id_starts_at_ends_at_idx ON public.appointment_slots USING btree (bay_id, starts_at, ends_at)
+// CREATE UNIQUE INDEX appointment_slots_pkey ON public.appointment_slots USING btree (id)
+// CREATE UNIQUE INDEX appointment_slots_service_id_bay_id_starts_at_key ON public.appointment_slots USING btree (service_id, bay_id, starts_at)
+// CREATE UNIQUE INDEX appointments_active_slot ON public.appointments USING btree (slot_id) WHERE (status = ANY (ARRAY['PENDING'::"AppointmentStatus", 'CONFIRMED'::"AppointmentStatus"]))
+// CREATE INDEX appointments_applied_offer_id_idx ON public.appointments USING btree (applied_offer_id)
+// CREATE INDEX appointments_bay_no_overlap ON public.appointments USING gist (bay_id, tstzrange(starts_at, ends_at, '[)'::text)) WHERE (status = ANY (ARRAY['PENDING'::"AppointmentStatus", 'CONFIRMED'::"AppointmentStatus"]))
+// CREATE UNIQUE INDEX appointments_pkey ON public.appointments USING btree (id)
+// CREATE INDEX appointments_service_id_idx ON public.appointments USING btree (service_id)
+// CREATE INDEX appointments_slot_id_idx ON public.appointments USING btree (slot_id)
+// CREATE INDEX appointments_user_id_starts_at_idx ON public.appointments USING btree (user_id, starts_at)
+// CREATE INDEX appointments_vehicle_id_idx ON public.appointments USING btree (vehicle_id)
+// CREATE UNIQUE INDEX auth_refresh_tokens_pkey ON public.auth_refresh_tokens USING btree (digest)
+// CREATE INDEX auth_refresh_tokens_session_id_idx ON public.auth_refresh_tokens USING btree (session_id)
+// CREATE INDEX auth_sessions_expires_at_idx ON public.auth_sessions USING btree (expires_at)
+// CREATE UNIQUE INDEX auth_sessions_pkey ON public.auth_sessions USING btree (id)
+// CREATE UNIQUE INDEX auth_sessions_refresh_token_digest_key ON public.auth_sessions USING btree (refresh_token_digest)
+// CREATE INDEX auth_sessions_user_id_idx ON public.auth_sessions USING btree (user_id)
+// CREATE UNIQUE INDEX business_hours_day_of_week_opens_at_closes_at_key ON public.business_hours USING btree (day_of_week, opens_at, closes_at)
+// CREATE UNIQUE INDEX business_hours_pkey ON public.business_hours USING btree (id)
+// CREATE UNIQUE INDEX media_assets_cloudinary_public_id_key ON public.media_assets USING btree (cloudinary_public_id)
+// CREATE UNIQUE INDEX media_assets_pkey ON public.media_assets USING btree (id)
+// CREATE UNIQUE INDEX offers_pkey ON public.offers USING btree (id)
+// CREATE INDEX offers_service_id_is_active_starts_at_ends_at_idx ON public.offers USING btree (service_id, is_active, starts_at, ends_at)
+// CREATE UNIQUE INDEX package_items_pkey ON public.package_items USING btree (package_id, service_id)
+// CREATE INDEX package_items_service_id_idx ON public.package_items USING btree (service_id)
+// CREATE INDEX payments_appointment_id_created_at_idx ON public.payments USING btree (appointment_id, created_at)
+// CREATE UNIQUE INDEX payments_bank_transaction_id_key ON public.payments USING btree (bank_transaction_id)
+// CREATE UNIQUE INDEX payments_merchant_transaction_id_key ON public.payments USING btree (merchant_transaction_id)
+// CREATE UNIQUE INDEX payments_one_active ON public.payments USING btree (appointment_id) WHERE (status = ANY (ARRAY['INITIATING'::"PaymentStatus", 'PENDING'::"PaymentStatus"]))
+// CREATE UNIQUE INDEX payments_one_applied ON public.payments USING btree (appointment_id) WHERE applied
+// CREATE UNIQUE INDEX payments_pkey ON public.payments USING btree (id)
+// CREATE INDEX payments_status_created_at_idx ON public.payments USING btree (status, created_at)
+// CREATE UNIQUE INDEX payments_validation_id_key ON public.payments USING btree (validation_id)
+// CREATE UNIQUE INDEX platform_settings_pkey ON public.platform_settings USING btree (key)
+// CREATE UNIQUE INDEX service_bays_name_key ON public.service_bays USING btree (name)
+// CREATE UNIQUE INDEX service_bays_pkey ON public.service_bays USING btree (id)
+// CREATE UNIQUE INDEX service_categories_pkey ON public.service_categories USING btree (id)
+// CREATE UNIQUE INDEX service_categories_slug_key ON public.service_categories USING btree (slug)
+// CREATE INDEX services_category_id_is_active_idx ON public.services USING btree (category_id, is_active)
+// CREATE UNIQUE INDEX services_pkey ON public.services USING btree (id)
+// CREATE UNIQUE INDEX services_slug_key ON public.services USING btree (slug)
+// CREATE UNIQUE INDEX users_email_key ON public.users USING btree (email)
+// CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)
+// CREATE UNIQUE INDEX vehicles_pkey ON public.vehicles USING btree (id)
+// CREATE INDEX vehicles_user_id_idx ON public.vehicles USING btree (user_id)
+// payments.payment_snapshot trigger prevents changes to appointment/provider/merchant ID/amount/currency.

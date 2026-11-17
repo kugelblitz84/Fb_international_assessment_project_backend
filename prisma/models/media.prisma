@@ -1,6 +1,13 @@
+enum MediaStorageProvider {
+ POSTGRESQL
+ CLOUDINARY
+}
 model MediaAsset {
  id String @id @default(uuid()) @db.Uuid
- data Bytes @db.ByteA
+ storageProvider MediaStorageProvider @default(POSTGRESQL) @map("storage_provider")
+ data Bytes? @db.ByteA
+ cloudinaryPublicId String? @unique @map("cloudinary_public_id")
+ cloudinarySecureUrl String? @map("cloudinary_secure_url")
  mimeType String @map("mime_type")
  fileSize Int @map("file_size")
  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz

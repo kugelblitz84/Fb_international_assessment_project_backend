@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { APP_CONFIG } from '../../core/config/app-config';
+import type { AppConfig } from '../../core/config/app-config';
 import { PrismaService } from '../../core/database/prisma.service';
 const publicKeys = [
   'platformName',
@@ -14,7 +16,10 @@ const publicKeys = [
 ];
 @Injectable()
 export class PlatformService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
+  ) {}
   async getPublicKnowledge() {
     const [settings, businessHours] = await Promise.all([
       this.prisma.platformSetting.findMany({
@@ -32,6 +37,11 @@ export class PlatformService {
       }),
     ]);
     return {
+      booking: {
+        horizonDays: this.config.booking.horizonDays,
+        slotStepMinutes: this.config.booking.slotStepMinutes,
+        timeZone: this.config.booking.timeZone,
+      },
       settings: Object.fromEntries(settings.map((s) => [s.key, s.value])),
       businessHours,
     };

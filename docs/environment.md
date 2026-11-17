@@ -47,9 +47,27 @@ The daily default is an application limit, not a guaranteed free-tier quota. Che
 
 | Variable | Default / requirement |
 |---|---|
-| `PUBLIC_API_BASE_URL` | No default; explicitly configured external API root including `/api/v1`, without trailing slash. HTTP(S); HTTPS required in production. Upload returns 503 when missing; public/catalog/auth continue working. Credentials, query and fragment are forbidden. |
+| `PUBLIC_API_BASE_URL` | External API root ending in `/api/v1`; no credentials/query/fragment. HTTPS in production and for checkout. Missing/unusable public base disables checkout; Cloudinary does not require it. |
 | `ADMIN_NAME` | CLI only; optional noninteractive provisioning name, same validation as registration |
 | `ADMIN_EMAIL` | CLI only; valid email, trimmed/lowercased; existing emails rejected |
 | `ADMIN_PASSWORD` | CLI only; 10�256 characters; no default; provide through a secret mechanism |
 
-Either supply all ADMIN_* variables or use the interactive hidden-password prompt. They never create accounts at application startup or during seeding. Uploaded image binaries persist in PostgreSQL, with a 2 MiB per-image limit independent of the JSON body limit. Provision database storage/backups accordingly. See [admin API](admin-api.md).
+Either supply all ADMIN_* variables or use the interactive hidden-password prompt. They never create accounts at application startup or during seeding. New image uploads use Cloudinary; legacy PostgreSQL bytes and seeded external URLs remain available. See [Cloudinary integration](cloudinary-integration.md) and [admin API](admin-api.md).
+
+## Optional image and payment providers
+
+| Variable | Default / requirement |
+|---|---|
+| CLOUDINARY_CLOUD_NAME | Blank disables new uploads; supply all three credentials together |
+| CLOUDINARY_API_KEY | Server-side key, required with cloud name/secret |
+| CLOUDINARY_API_SECRET | Server-side secret, required with cloud name/key |
+| CLOUDINARY_FOLDER | autocare; safe slash-separated path segments |
+| SSLCOMMERZ_STORE_ID | Blank disables online payments; supply together with store password |
+| SSLCOMMERZ_STORE_PASSWORD | Server-side secret, required with store ID |
+| SSLCOMMERZ_IS_LIVE | false; explicit true selects real-payment environment |
+| SSLCOMMERZ_TIMEOUT_MS | 20000, integer 1000–60000; no automatic session retry |
+| TRUSTED_PROXY_ADDRESSES | Empty means no forwarded-header trust; comma-separated explicit proxy IPs/CIDRs only |
+
+Both optional providers allow completely missing credentials; partial credentials fail startup. No provider calls run at startup. Cloudinary upload timeout is 20 seconds. Pay-at-workshop bookings continue without online payment. HTTPS PUBLIC_API_BASE_URL must be externally reachable for gateway callbacks; obvious loopback/private/test hosts are rejected for checkout. The operator verifies public DNS/TLS/ingress. Never expose credentials in Flutter, request logs, exception causes or URLs in access logs.
+
+On Render/Northflank or equivalent, use provider-assigned PORT, secure cookies and exact HTTPS CORS origins. Trust only verified proxy addresses from that deployment's actual ingress topology. Do not use boolean trust-proxy or arbitrary forwarded headers. Short-window authentication/payment throttles remain process-local, so multiple replicas need shared ingress throttling; per-payment reconciliation spacing is persisted in PostgreSQL. [Payment setup and merchant portal runbook](payment-api.md).

@@ -6,17 +6,34 @@ import {
 import type { AppointmentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { localInstant } from '../../scheduling/domain/workshop-time';
+import { SslcommerzService } from '../../payments/sslcommerz.service';
+import {
+  paymentSummary,
+  assertPaymentTransition,
+  unresolvedStatuses,
+} from '../../payments/payment.rules';
 const include = {
+  payments: true,
   user: { select: { id: true, name: true, email: true } },
   vehicle: true,
 } as const;
 type Row = Prisma.AppointmentGetPayload<{ include: typeof include }>;
 @Injectable()
 export class AdminAppointmentService {
-  constructor(private readonly db: PrismaService) {}
+  constructor(
+    private readonly db: PrismaService,
+    private readonly gateway: SslcommerzService,
+  ) {}
   private dto(row: Row) {
+    const { payments, ...safe } = row;
     return {
-      ...row,
+      ...safe,
+      ...paymentSummary(row, payments, this.gateway.enabled),
+      canCancel:
+        ['PENDING', 'CONFIRMED'].includes(row.status) &&
+        !payments.some(
+          (p) => p.applied || unresolvedStatuses.includes(p.status),
+        ),
       status: row.status.toLowerCase(),
       basePrice: row.basePrice.toNumber(),
       price: row.price.toNumber(),
@@ -58,6 +75,7 @@ export class AdminAppointmentService {
     status: 'confirmed' | 'completed' | 'cancelled',
   ) {
     return this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM appointments WHERE id = ${id}::uuid FOR UPDATE`;
       const now = new Date();
       const allowed: AppointmentStatus[] =
         status === 'confirmed'
@@ -67,9 +85,10 @@ export class AdminAppointmentService {
             : ['PENDING', 'CONFIRMED'];
       const previous = await tx.appointment.findUnique({
         where: { id },
-        select: { status: true },
+        include: { payments: true },
       });
       if (!previous) throw new NotFoundException('Appointment not found.');
+      assertPaymentTransition(previous.payments, status === 'cancelled');
       if (!allowed.includes(previous.status))
         throw new ConflictException('Invalid appointment transition.');
       const changed = await tx.appointment.updateMany({

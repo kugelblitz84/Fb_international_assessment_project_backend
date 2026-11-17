@@ -1,39 +1,48 @@
 import {
-  Inject,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../core/database/prisma.service';
-import { APP_CONFIG } from '../../core/config/app-config';
-import type { AppConfig } from '../../core/config/app-config';
+import { CloudinaryService } from './cloudinary.service';
 import { imageMime } from './image-signature';
 @Injectable()
 export class MediaService {
   constructor(
     private readonly db: PrismaService,
-    @Inject(APP_CONFIG) private readonly config: AppConfig,
+    private readonly cloudinary: CloudinaryService,
   ) {}
   async upload(data: Buffer) {
-    if (!this.config.publicApiBaseUrl)
-      throw new ServiceUnavailableException(
-        'Image uploads require PUBLIC_API_BASE_URL.',
-      );
     const mimeType = imageMime(data);
     const id = randomUUID();
-    await this.db.mediaAsset.create({
-      data: {
-        id,
-        data: Uint8Array.from(data),
-        mimeType,
-        fileSize: data.length,
-      },
-      select: { id: true },
-    });
+    const uploaded = await this.cloudinary.upload(data, id);
+    try {
+      await this.db.mediaAsset.create({
+        data: {
+          id,
+          storageProvider: 'CLOUDINARY',
+          cloudinaryPublicId: uploaded.publicId,
+          cloudinarySecureUrl: uploaded.secureUrl,
+          mimeType,
+          fileSize: data.length,
+        },
+        select: { id: true },
+      });
+    } catch {
+      try {
+        await this.cloudinary.cleanup(uploaded.publicId);
+      } catch {
+        /* Best effort; no provider response or credentials in logs. */
+      }
+      throw new ServiceUnavailableException({
+        code: 'MEDIA_PERSISTENCE_FAILED',
+        message: 'Unable to save the image. Please try again.',
+      });
+    }
     return {
       id,
-      imageUrl: this.config.publicApiBaseUrl + '/media/images/' + id,
+      imageUrl: uploaded.secureUrl,
     };
   }
   async get(id: string) {
@@ -41,7 +50,7 @@ export class MediaService {
       where: { id },
       select: { data: true, mimeType: true, fileSize: true },
     });
-    if (!row) throw new NotFoundException('Image not found.');
-    return row;
+    if (!row?.data) throw new NotFoundException('Legacy image not found.');
+    return { ...row, data: row.data };
   }
 }

@@ -1,3 +1,4 @@
+import type { AppointmentPaymentSummary } from '../../payments/payment.rules';
 export interface CreateAppointment {
   serviceId: string;
   slotId: string;
@@ -7,7 +8,7 @@ export interface AppointmentFilters {
   status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   period?: 'upcoming' | 'previous';
 }
-export interface AppointmentDto {
+export interface AppointmentDto extends AppointmentPaymentSummary {
   id: string;
   serviceId: string;
   serviceName: string;

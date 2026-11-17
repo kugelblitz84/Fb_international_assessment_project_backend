@@ -58,8 +58,18 @@ Add `GEMINI_API_KEY` to the local `.env`; the default configurable model is `gem
 
 ## Administration
 
-The additive admin module manages categories, individual services, packages, offers, persistent PostgreSQL images and appointment status. All admin endpoints require an active ADMIN session; public registration always creates CUSTOMER.
+The additive admin module manages categories, individual services, packages, offers, Cloudinary image uploads, legacy PostgreSQL images, payments and appointment status. All admin endpoints require an active ADMIN session; public registration always creates CUSTOMER.
 
-Apply migrations with `npm run prisma:migrate:deploy`, configure `PUBLIC_API_BASE_URL` (including `/api/v1`) for uploads, and run `npm run admin:create`. The CLI prompts for name/email and a hidden password; no default administrator or public promotion endpoint exists. Existing users become CUSTOMER automatically. No database reset is required.
+Apply migrations with `npm run prisma:migrate:deploy` and run `npm run admin:create`. The CLI prompts for name/email and a hidden password, or accepts ADMIN_NAME, ADMIN_EMAIL and ADMIN_PASSWORD together. There is no default administrator or public promotion endpoint. Existing users become CUSTOMER automatically. No database reset is required.
 
 See [complete admin contracts and Flutter handover](docs/admin-api.md) and [implementation/verification report](docs/admin-implementation-report.md).
+
+## Image storage and hosted payments
+
+Enable uploads with CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET; CLOUDINARY_FOLDER defaults to autocare. New images use Cloudinary directly; existing bytea images and seeded external URLs remain available. The admin multipart route and `{id,imageUrl}` response are unchanged. [Cloudinary setup and errors](docs/cloudinary-integration.md).
+
+Enable checkout with SSLCOMMERZ_STORE_ID, SSLCOMMERZ_STORE_PASSWORD and a publicly reachable HTTPS PUBLIC_API_BASE_URL ending in /api/v1. SSLCOMMERZ_IS_LIVE defaults to false; SSLCOMMERZ_TIMEOUT_MS defaults to 20000. Completely missing credentials disable only that integration; partial credentials fail startup. No provider calls run at startup.
+
+Booking remains independent of payment: customers book first, then optionally pay online or at the workshop. Payment never confirms a booking. Paid/unresolved payments block cancellation; review cases require manual support. No refund endpoint is provided. [Payment API and sandbox handover](docs/payment-api.md), [final implementation and verification](docs/final-integration-report.md).
+
+On Render, Northflank or equivalent hosting, use the assigned PORT, terminate HTTPS at the hosting ingress, configure exact CORS origins and secure cookies, and set the external API URL explicitly. TRUSTED_PROXY_ADDRESSES accepts only the deployment's verified proxy IPs/CIDRs; empty leaves forwarded headers untrusted. Add shared ingress throttling when deploying multiple replicas.

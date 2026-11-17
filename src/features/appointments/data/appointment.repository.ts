@@ -4,7 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { Appointment } from '@prisma/client';
+import type { Appointment, Payment } from '@prisma/client';
+import { SslcommerzService } from '../../payments/sslcommerz.service';
+import {
+  paymentSummary,
+  assertPaymentTransition,
+  unresolvedStatuses,
+} from '../../payments/payment.rules';
 import { PrismaService } from '../../../core/database/prisma.service';
 import {
   activeCatalog,
@@ -26,8 +32,13 @@ import type {
   CreateAppointment,
 } from '../domain/appointment.types';
 import type { BookingSlot, OpeningInterval } from '../domain/booking-policy';
-function dto(row: Appointment): AppointmentDto {
+function dto(
+  row: Appointment & { payments?: Payment[] },
+  enabled: boolean,
+): AppointmentDto {
+  const payments = row.payments ?? [];
   return {
+    ...paymentSummary(row, payments, enabled),
     id: row.id,
     serviceId: row.serviceId,
     serviceName: row.serviceName,
@@ -46,7 +57,9 @@ function dto(row: Appointment): AppointmentDto {
     currency: row.currency,
     durationMinutes: row.durationMinutes,
     appliedOfferId: row.appliedOfferId,
-    canCancel: row.status === 'PENDING',
+    canCancel:
+      row.status === 'PENDING' &&
+      !payments.some((p) => p.applied || unresolvedStatuses.includes(p.status)),
     createdAt: row.createdAt.toISOString(),
     cancelledAt: row.cancelledAt?.toISOString() ?? null,
   };
@@ -72,7 +85,10 @@ export function isReservationConflict(error: unknown): boolean {
 }
 @Injectable()
 export class AppointmentRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gateway: SslcommerzService,
+  ) {}
   async reserve(
     userId: string,
     input: CreateAppointment,
@@ -134,7 +150,7 @@ export class AppointmentRepository {
           },
         });
       });
-      return dto(row);
+      return dto(row, this.gateway.enabled);
     } catch (error) {
       if (isReservationConflict(error))
         throw new ConflictException(
@@ -160,29 +176,41 @@ export class AppointmentRepository {
       ];
     return (
       await this.prisma.appointment.findMany({
+        include: { payments: true },
         where,
         orderBy: [{ startsAt: 'desc' }, { id: 'asc' }],
       })
-    ).map(dto);
+    ).map((row) => dto(row, this.gateway.enabled));
   }
   async getOwned(userId: string, id: string) {
     const row = await this.prisma.appointment.findFirst({
       where: { id, userId },
+      include: { payments: true },
     });
     if (!row) throw new NotFoundException('Appointment not found.');
-    return dto(row);
+    return dto(row, this.gateway.enabled);
   }
   async cancel(userId: string, id: string) {
-    const changed = await this.prisma.appointment.updateMany({
-      where: { id, userId, status: 'PENDING' },
-      data: { status: 'CANCELLED', cancelledAt: new Date() },
-    });
-    if (!changed.count) {
-      await this.getOwned(userId, id);
-      throw new ConflictException(
-        'Only pending appointments can be cancelled.',
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM appointments WHERE id = ${id}::uuid FOR UPDATE`;
+      const row = await tx.appointment.findFirst({
+        where: { id, userId },
+        include: { payments: true },
+      });
+      if (!row) throw new NotFoundException('Appointment not found.');
+      if (row.status !== 'PENDING')
+        throw new ConflictException(
+          'Only pending appointments can be cancelled.',
+        );
+      assertPaymentTransition(row.payments, true);
+      return dto(
+        await tx.appointment.update({
+          where: { id },
+          data: { status: 'CANCELLED', cancelledAt: new Date() },
+          include: { payments: true },
+        }),
+        this.gateway.enabled,
       );
-    }
-    return this.getOwned(userId, id);
+    });
   }
 }

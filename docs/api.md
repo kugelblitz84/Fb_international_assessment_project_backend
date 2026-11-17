@@ -18,7 +18,7 @@ All paths are relative to `/api/v1`. Requests use Zod; unknown booking fields su
 | GET | `/offers` | Public eligible offers on active catalog items |
 | GET | `/offers/:id` | Public eligible offer or 404 |
 | GET | `/services/:id/availability?date=YYYY-MM-DD` | Public persisted slot availability |
-| GET | `/platform` | Public `{settings,businessHours}` |
+| GET | `/platform` | Public `{settings,businessHours,booking:{horizonDays,slotStepMinutes,timeZone}}` |
 | POST | `/assistant/chat` | Optional bearer; public information only, 200 structured assistant message |
 | POST | `/appointments` | Bearer; 201 Appointment DTO |
 | GET | `/appointments` | Bearer; owned Appointment DTO array |
@@ -53,9 +53,9 @@ Create: `{ "serviceId":"<UUID>", "slotId":"<UUID>" }`, optional owned `vehicleId
 
 Appointment DTO: `id`, `serviceId`, snapshot `serviceName`, lowercase `status`, nested `slot`, nullable `vehicleId`, snapshot `originalPrice`, `price`, `currency`, `durationMinutes`, nullable `appliedOfferId`, `canCancel`, `createdAt`, nullable `cancelledAt`. Nested slots retain Flutter's required fields and use `available=false` as a historical representation; query availability for current capacity.
 
-List filters: lowercase `status=pending|confirmed|cancelled|completed`; `period=upcoming|previous`. Upcoming: future start and pending/confirmed. Previous: start at/before now or cancelled/completed. Filters combine; order is start descending then ID. Another user's appointment returns 404. Cancellation accepts no body or `{}`. Only pending appointments can be cancelled, including past pending appointments. Repeated/non-pending cancellation returns 409. Capacity releases immediately.
+List filters: lowercase `status=pending|confirmed|cancelled|completed`; `period=upcoming|previous`. Upcoming: future start and pending/confirmed. Previous: start at/before now or cancelled/completed. Filters combine; order is start descending then ID. Another user's appointment returns 404. Cancellation accepts no body or `{}`. Pending appointments, including past pending appointments, can be cancelled only without applied or unresolved online payment. Repeated/non-pending/paid/unresolved cancellation returns 409. Capacity releases immediately after permitted cancellation. All customer/admin appointment responses add paymentStatus, paymentMethod and canPayOnline; canCancel includes payment checks. Exact values are in [payment API](payment-api.md).
 
-Snapshots retain charged prices and names after catalog changes. No public endpoint confirms/completes appointments or edits the catalog; these workflows are outside scope.
+Snapshots retain booked prices and names after catalog changes. Confirmation/completion and catalog edits use the existing ADMIN-protected routes in [admin API](admin-api.md); they are not public operations.
 
 ## Errors and examples
 
@@ -84,3 +84,9 @@ Limits: five/minute and twenty/hour for both IP and authenticated user, configur
 No raw provider error, key or prompt is returned. Personal appointment queries are outside the assistant scope; it provides public instructions and directs users to My bookings. Specific slot questions are directed to the service booking page rather than fabricated times. [Implementation and privacy details](gemini-assistant.md).
 
 Admin endpoint contracts, image responses, role-aware auth responses and Flutter requirements are documented in [admin-api.md](admin-api.md). Public user objects now include `role: CUSTOMER | ADMIN`, including login, register, profile and refresh/session restoration. All existing public paths remain available.
+
+## Optional online payment and images
+
+Public GET /payments/config advertises online availability and the workshop option. After booking, owners can POST /appointments/:id/pay with phone/address/city/postcode, GET /appointments/:id/payments, GET /payments/:id and POST /payments/:id/reconcile. ADMIN payment routes use /admin/payments. Only /payments/sslcommerz/{success,fail,cancel,ipn} accept public gateway mutations, with independent server validation. See [complete payment contract and Flutter examples](payment-api.md).
+
+POST /admin/media/images retains ADMIN authorization, multipart file field, signature checks, 2 MiB maximum and the exact {id,imageUrl} response. New URLs are direct Cloudinary URLs; GET /media/images/:id continues serving legacy images. See [Cloudinary integration](cloudinary-integration.md).

@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { isIP } from 'node:net';
 
 export const APP_CONFIG = Symbol('APP_CONFIG');
 
@@ -12,6 +13,19 @@ export interface AppConfig {
   readonly databaseUrl: string;
   readonly corsOrigins: string[];
   readonly httpBodyLimitBytes: number;
+  readonly trustedProxies: string[];
+  readonly cloudinary: {
+    readonly cloudName?: string;
+    readonly apiKey?: string;
+    readonly apiSecret?: string;
+    readonly folder: string;
+  };
+  readonly sslcommerz: {
+    readonly storeId?: string;
+    readonly storePassword?: string;
+    readonly isLive: boolean;
+    readonly timeoutMs: number;
+  };
   readonly gemini: {
     readonly apiKey?: string;
     readonly model: string;
@@ -162,20 +176,78 @@ export function loadAppConfig(
     '',
   );
   if (publicApiBaseUrl) {
-    const url = new URL(publicApiBaseUrl);
-    if (
-      !['http:', 'https:'].includes(url.protocol) ||
-      url.username ||
-      url.password ||
-      url.search ||
-      url.hash ||
-      (nodeEnv === 'production' && url.protocol !== 'https:')
-    )
+    try {
+      const url = new URL(publicApiBaseUrl);
+      if (
+        !['http:', 'https:'].includes(url.protocol) ||
+        url.username ||
+        url.password ||
+        url.search ||
+        url.hash ||
+        !url.pathname.endsWith('/api/v1') ||
+        (nodeEnv === 'production' && url.protocol !== 'https:')
+      )
+        throw new Error('Invalid callback base.');
+    } catch {
       throw new Error(
-        'PUBLIC_API_BASE_URL must be an HTTP(S) API base URL; production requires HTTPS.',
+        'PUBLIC_API_BASE_URL must be an HTTP(S) API base ending in /api/v1 without credentials, query or fragment; production requires HTTPS.',
       );
+    }
   }
+  const credentials = (names: string[]) => {
+    const values = names.map((name) => environment[name]?.trim() || undefined);
+    if (values.some(Boolean) && !values.every(Boolean))
+      throw new Error(`${names.join(', ')} must be supplied together.`);
+    return values;
+  };
+  const [cloudName, apiKey, apiSecret] = credentials([
+    'CLOUDINARY_CLOUD_NAME',
+    'CLOUDINARY_API_KEY',
+    'CLOUDINARY_API_SECRET',
+  ]);
+  const [storeId, storePassword] = credentials([
+    'SSLCOMMERZ_STORE_ID',
+    'SSLCOMMERZ_STORE_PASSWORD',
+  ]);
+  const isLive = environment.SSLCOMMERZ_IS_LIVE ?? 'false';
+  if (!['true', 'false'].includes(isLive))
+    throw new Error('SSLCOMMERZ_IS_LIVE must be true or false.');
+  const folder = environment.CLOUDINARY_FOLDER?.trim() || 'autocare';
+  if (!/^[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/.test(folder))
+    throw new Error('CLOUDINARY_FOLDER must contain safe path segments.');
+  const trustedProxies = environment.TRUSTED_PROXY_ADDRESSES?.trim()
+    ? environment.TRUSTED_PROXY_ADDRESSES.split(',').map((s) => s.trim())
+    : [];
+  if (
+    trustedProxies.some((s) => {
+      const [address, prefix, extra] = s.split('/');
+      const family = isIP(address);
+      return (
+        !family ||
+        extra !== undefined ||
+        (prefix !== undefined &&
+          (!/^\d+$/.test(prefix) || Number(prefix) > (family === 4 ? 32 : 128)))
+      );
+    })
+  )
+    throw new Error(
+      'TRUSTED_PROXY_ADDRESSES must contain explicit IP addresses or CIDRs.',
+    );
   return {
+    trustedProxies,
+    cloudinary: { cloudName, apiKey, apiSecret, folder },
+    sslcommerz: {
+      storeId,
+      storePassword,
+      isLive: isLive === 'true',
+      timeoutMs: parseInteger(
+        'SSLCOMMERZ_TIMEOUT_MS',
+        environment.SSLCOMMERZ_TIMEOUT_MS,
+        20000,
+        1000,
+        60000,
+      ),
+    },
     publicApiBaseUrl,
     nodeEnv,
     gemini: {
