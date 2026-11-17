@@ -1,0 +1,118 @@
+{
+  "date": "2026-11-18",
+  "timeZone": "Asia/Dhaka",
+  "slots": [
+    {
+      "id": "acf0da04-3fb6-4ea8-96e8-47bf590bd059",
+      "startsAt": "2026-11-18T07:00:00.000Z",
+      "endsAt": "2026-11-18T10:30:00.000Z",
+      "workshopTime": "2026-11-18T13:00:00",
+      "timeZone": "Asia/Dhaka",
+      "available": true
+    },
+    {
+      "id": "5cd66a5b-0150-46e9-8f7b-f6581e2932f9",
+      "startsAt": "2026-11-18T07:00:00.000Z",
+      "endsAt": "2026-11-18T10:30:00.000Z",
+      "workshopTime": "2026-11-18T13:00:00",
+      "timeZone": "Asia/Dhaka",
+      "available": true
+    },
+    {
+      "id": "d7b7a697-3f96-4ff3-b0e8-0229561aaa31",
+      "startsAt": "2026-11-18T07:15:00.000Z",
+      "endsAt": "2026-11-18T10:45:00.000Z",
+      "workshopTime": "2026-11-18T13:15:00",
+      "timeZone": "Asia/Dhaka",
+      "available": true
+    },
+    {
+      "id": "eb0fb943-092c-4fa8-a450-e2ae7445687f",
+      "startsAt": "2026-11-18T07:15:00.000Z",
+      "endsAt": "2026-11-18T10:45:00.000Z",
+      "workshopTime": "2026-11-18T13:15:00",
+      "timeZone": "Asia/Dhaka",
+      "available": true
+    },
+    {
+      "id": "6bf647d6-b8bf-4228-8801-30bab9e3b8ac",
+      "startsAt": "2026-11-18T07:30:00.000Z",
+      "endsAt": "2026-11-18T11:00:00.000Z",
+      "workshopTime": "2026-11-18T13:30:00",
+      "timeZone": "Asia/Dhaka",
+      "available": true
+    },
+    {
+      "id": "6fa62a1b-2762-4e5a-84de-bebe043d901a",
+      "startsAt": "2026-11-18T07:30:00.000Z",
+      "endsAt": "2026-11-18T11:00:00.000Z",
+      "workshopTime": "2026-11-18T13:30:00",
+      "timeZone": "Asia/Dhaka",
+      "available": true
+    },
+    {
+      "id": "e7376965-9fa5-4e3c-9e4c-05e8cb3c715a",
+      "startsAt": "2026-11-18T07:45:00.000Z",
+      "endsAt": "2026-11-18T11:15:00.000Z",
+      "workshopTime": "2026-11-18T13:45:00",
+      "timeZone": "Asia/Dhaka",
+      "available": true
+    },
+    {
+      "id": "43122a1a-40a5-473e-95bc-af2cf0945378",
+      "startsAt": "2026-11-18T07:45:00.000Z",
+      "endsAt": "2026-11-18T11:15:00.000Z",
+      "workshopTime": "2026-11-18T13:45:00",
+      "timeZone": "Asia/Dhaka",
+      "available": true
+    },
+    {
+      "id": "bf289f89-2eca-4305-b057-0a3daa400868",
+      "startsAt": "2026-11-18T08:00:00.000Z",
+      "endsAt": "2026-11-18T11:30:00.000Z",
+      "workshopTime": "2026-11-18T14:00:00",
+      "timeZone": "Asia/Dhaka",
+      "available": true
+    },
+    {
+      "id": "6ebfc8d6-624f-4397-b221-7abd092bacf4",
+      "startsAt": "2026-11-18T08:00:00.000Z",
+      "endsAt": "2026-11-18T11:30:00.000Z",
+      "workshopTime": "2026-11-18T14:00:00",
+      "timeZone": "Asia/Dhaka",
+      "available": true
+    },
+    {
+      "id": "f89ebc75-1a09-4dbe-828f-bcc58a8018d4",
+      "startsAt": "2026-11-18T08:15:00.000Z",
+      "endsAt": "2026-11-18T11:45:00.000Z",
+      "workshopTime": "2026-11-18T14:15:00",
+      "timeZone": "Asia/Dhaka",
+      "available": true
+    },
+    {
+      "id": "b6f3edc0-c4d7-4e43-a1c4-fce3981e4f3e",
+      "startsAt": "2026-11-18T08:15:00.000Z",
+      "endsAt": "2026-11-18T11:45:00.000Z",
+      "workshopTime": "2026-11-18T14:15:00",
+      "timeZone": "Asia/Dhaka",
+      "available": true
+    },
+    {
+      "id": "8697a717-b211-43cb-b159-0c620b0d7dfe",
+      "startsAt": "2026-11-18T08:30:00.000Z",
+      "endsAt": "2026-11-18T12:00:00.000Z",
+      "workshopTime": "2026-11-18T14:30:00",
+      "timeZone": "Asia/Dhaka",
+      "available": true
+    },
+    {
+      "id": "a0af2547-17d3-4bd8-97cc-97fa9a716420",
+      "startsAt": "2026-11-18T08:30:00.000Z",
+      "endsAt": "2026-11-18T12:00:00.000Z",
+      "workshopTime": "2026-11-18T14:30:00",
+      "timeZone": "Asia/Dhaka",
+      "available": true
+    }
+  ]
+}

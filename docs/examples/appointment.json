@@ -1,0 +1,23 @@
+{
+  "id": "f4e06b14-a9ee-4059-b89a-38c345b8d036",
+  "serviceId": "51540114-31ec-49d2-b55c-917b16a9bc58",
+  "serviceName": "Premium Car Care",
+  "status": "pending",
+  "slot": {
+    "id": "acf0da04-3fb6-4ea8-96e8-47bf590bd059",
+    "startsAt": "2026-11-18T07:00:00.000Z",
+    "endsAt": "2026-11-18T10:30:00.000Z",
+    "workshopTime": "2026-11-18T13:00:00",
+    "timeZone": "Asia/Dhaka",
+    "available": false
+  },
+  "vehicleId": null,
+  "originalPrice": 3500,
+  "price": 3300,
+  "currency": "BDT",
+  "durationMinutes": 210,
+  "appliedOfferId": "10000000-0000-4000-8000-000000000002",
+  "canCancel": true,
+  "createdAt": "2026-11-17T11:46:14.888Z",
+  "cancelledAt": null
+}

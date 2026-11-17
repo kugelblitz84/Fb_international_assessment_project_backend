@@ -1,73 +1,49 @@
 # AutoCare backend
 
-NestJS foundation for the AutoCare vehicle service platform. **Phase 1 is implemented:** typed configuration, shared HTTP bootstrap, PostgreSQL/Prisma infrastructure, Zod request validation, a framework-independent domain error base, and public health reporting.
+NestJS 11, PostgreSQL, Prisma 7.10.1 and Zod 4 REST API for vehicle service discovery and customer appointments. Includes authentication, services, packages, offers, persisted availability and private bookings. No AI SDK or assistant endpoint is implemented.
 
-## Local setup
+## Run locally
 
-Use npm, Node.js 22.12+ on the 22 release line or Node.js 24+, and a running PostgreSQL instance. Node.js 24 LTS is recommended for this project.
-
-```sh
-npm ci
-```
+Use Node.js 22.12+ or 24+, and PostgreSQL with permission to create `btree_gist`. Supply an empty database without resetting an existing database.
 
 ```powershell
+npm ci
 Copy-Item .env.example .env
-```
-
-Set `DATABASE_URL` in `.env` to an existing local database with your credentials. The example password is a placeholder. PostgreSQL must be reachable before application initialization completes.
-
-```sh
+# Configure DATABASE_URL and a random AUTH_ACCESS_TOKEN_SECRET in .env.
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+npm run prisma:validate
 npm run prisma:generate
+npm run prisma:migrate:dev
+npm run prisma:seed
 npm run start:dev
 ```
 
-The server listens on port 3000 by default. Local API base URL: **`http://localhost:3000/api/v1`**. Android emulator base URL: **`http://10.0.2.2:3000/api/v1`**.
+Base URL: `http://localhost:3000/api/v1`. Health: `GET /api/v1/health/status`.
 
-```sh
-curl http://localhost:3000/api/v1/health/status
-```
+Deployment: `npm ci`, `npm run prisma:generate`, `npm run prisma:migrate:deploy`, `npm run build`, `npm run start:prod`. Configure production HTTPS, trusted CORS origins and secure cookies first. Seeding is an explicit demonstration-data operation, not a startup hook.
 
-The health response includes `status`, UTC `timestamp`, `uptimeSeconds`, and the configured `environment`. It reports process liveness; it does not run a database readiness query.
-
-## Verification
-
-```sh
+```powershell
+npm run prisma:validate
+npm run prisma:generate
 npm run build
 npm run lint
-npx prisma validate
+npm test
+# Use a dedicated disposable database with migrations applied.
+$env:TEST_DATABASE_URL='postgresql://USER:PASSWORD@localhost:5432/autocare_test'
+npm run test:integration
 ```
 
-The build generates Prisma Client automatically. Automated tests and test tooling are omitted for this assignment. After starting the application, verify the health endpoint with the curl command above.
+Integration tests skip when `TEST_DATABASE_URL` is absent. They create and clean test users/bookings, run the seed, temporarily edit seeded catalog values and restore them. They run serially. No reset command is used.
 
-```sh
-npm run start:prod
-```
+## Documentation
 
-Production startup uses the compiled `dist/main.js`; build first. Production configuration requires explicit HTTPS browser origins. Authentication, cookie security, and secret validation will be implemented alongside authentication, which is not exposed yet.
-
-## Project layout
-
-```text
-prisma/schema.prisma           Generator and PostgreSQL datasource; no models yet
-prisma.config.ts              Schema-directory and migration-path configuration
-src/app/                      Root composition and reusable HTTP configuration
-src/core/config/              Global typed configuration
-src/core/database/            Shared PrismaPg lifecycle provider
-src/core/errors/              Pure domain error base
-src/core/validator/            Generic Zod validation pipe
-src/features/health/          Public health controller and service
-```
-
-The [reference registration architecture](https://github.com/kugelblitz84/edu_app_backend/tree/002711b1219b2bf4f64754a1c78f2c13a9b3c7ad/src/features/auth/register) guides later domain contracts, data implementations, and factory-provider composition. Existing compatible NestJS scaffold dependencies are preserved.
-
-## Scope and documentation
-
-No business models, migrations, seeds, registration/login, sessions, catalogue/profile APIs, availability, bookings, AI integration, or outbox processing have been implemented. Schema/migration/seed verification and the ER/DBML diagram belong to Phase 2. The reference and frontend repositories have not been modified.
-
-- [API behavior and examples](docs/api.md)
+- [Architecture and source inspection](docs/architecture.md)
+- [Database and ER diagram](docs/database.md), [DBML](docs/schema.dbml)
+- [API contracts](docs/api.md)
 - [Environment variables](docs/environment.md)
-- [Architecture and dependency rules](docs/architecture.md)
-- [Database setup and verification](docs/database.md)
-- [Flutter base URL and future CSRF transport changes](docs/flutter-integration.md)
-- [Development workflow](WORKFLOW.md)
-- [Phase 1 verification report](docs/phase-1-report.md)
+- [Required Flutter integration work](docs/flutter-integration.md)
+- [Future AI service contracts and privacy](docs/ai-assistant-prerequisites.md)
+- [Implementation and verification report](docs/implementation-report.md)
+- [Generated JSON examples](docs/examples/)
+
+Demo seed: five categories, six individual services, three packages, two introductory offers, two bays, fourteen opening intervals and ten public settings. Existing seed rows are preserved on rerun, including offer expiration dates. No users, passwords or appointments are seeded.

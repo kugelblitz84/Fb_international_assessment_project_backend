@@ -1,0 +1,137 @@
+{
+  "settings": {
+    "platformName": "AutoCare",
+    "description": "A vehicle service discovery and appointment booking platform.",
+    "currency": "BDT",
+    "timeZone": "Asia/Dhaka",
+    "bookingPolicy": {
+      "steps": [
+        "Select a service or package",
+        "Choose an available slot",
+        "Sign in",
+        "Submit the booking"
+      ],
+      "initialStatus": "pending",
+      "vehicleRequired": false
+    },
+    "cancellationPolicy": {
+      "allowedStatuses": [
+        "pending"
+      ],
+      "releasesCapacity": true
+    },
+    "bookingStatuses": {
+      "pending": "Awaiting confirmation.",
+      "cancelled": "Cancelled; reserved capacity released.",
+      "completed": "Service completed.",
+      "confirmed": "Confirmed by the workshop."
+    },
+    "packageRules": {
+      "pricing": "Official package price; not the sum of components.",
+      "nestedPackages": false,
+      "independentlyBookable": true
+    },
+    "offerRules": {
+      "rounding": "BDT two decimals, half up",
+      "stacking": false,
+      "validity": "startsAt inclusive, endsAt exclusive",
+      "selection": "Lowest valid final price; offer ID breaks ties."
+    },
+    "faqs": [
+      {
+        "answer": "No. Vehicle selection is optional.",
+        "question": "Do I need to register my vehicle?"
+      },
+      {
+        "answer": "Only pending appointments can be cancelled.",
+        "question": "Can I cancel?"
+      }
+    ]
+  },
+  "businessHours": [
+    {
+      "dayOfWeek": 0,
+      "opensAt": "09:00",
+      "closesAt": "12:00",
+      "isClosed": false
+    },
+    {
+      "dayOfWeek": 0,
+      "opensAt": "13:00",
+      "closesAt": "18:00",
+      "isClosed": false
+    },
+    {
+      "dayOfWeek": 1,
+      "opensAt": "09:00",
+      "closesAt": "12:00",
+      "isClosed": false
+    },
+    {
+      "dayOfWeek": 1,
+      "opensAt": "13:00",
+      "closesAt": "18:00",
+      "isClosed": false
+    },
+    {
+      "dayOfWeek": 2,
+      "opensAt": "09:00",
+      "closesAt": "12:00",
+      "isClosed": false
+    },
+    {
+      "dayOfWeek": 2,
+      "opensAt": "13:00",
+      "closesAt": "18:00",
+      "isClosed": false
+    },
+    {
+      "dayOfWeek": 3,
+      "opensAt": "09:00",
+      "closesAt": "12:00",
+      "isClosed": false
+    },
+    {
+      "dayOfWeek": 3,
+      "opensAt": "13:00",
+      "closesAt": "18:00",
+      "isClosed": false
+    },
+    {
+      "dayOfWeek": 4,
+      "opensAt": "09:00",
+      "closesAt": "12:00",
+      "isClosed": false
+    },
+    {
+      "dayOfWeek": 4,
+      "opensAt": "13:00",
+      "closesAt": "18:00",
+      "isClosed": false
+    },
+    {
+      "dayOfWeek": 5,
+      "opensAt": "09:00",
+      "closesAt": "12:00",
+      "isClosed": false
+    },
+    {
+      "dayOfWeek": 5,
+      "opensAt": "13:00",
+      "closesAt": "18:00",
+      "isClosed": false
+    },
+    {
+      "dayOfWeek": 6,
+      "opensAt": "09:00",
+      "closesAt": "12:00",
+      "isClosed": false
+    },
+    {
+      "dayOfWeek": 6,
+      "opensAt": "13:00",
+      "closesAt": "18:00",
+      "isClosed": false
+    }
+  ]
+}

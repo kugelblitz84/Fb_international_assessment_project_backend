@@ -1,0 +1,293 @@
+[
+  {
+    "id": "1b9f524c-8ff3-44ef-849d-f6c09d67f07d",
+    "name": "Express Car Care",
+    "slug": "express-car-care",
+    "description": "Demonstration Express Car Care workshop package.",
+    "categoryId": "41549652-2d21-482b-9bfe-f1f7af708c18",
+    "categoryName": "Packages",
+    "type": "PACKAGE",
+    "price": 1400,
+    "originalPrice": 1400,
+    "effectivePrice": 1400,
+    "currency": "BDT",
+    "durationMinutes": 105,
+    "imageUrl": null,
+    "inclusions": [
+      "Exterior wash",
+      "Battery health check",
+      "Tyre & safety inspection"
+    ],
+    "available": true,
+    "isFeatured": false,
+    "activeOffer": null,
+    "packageItems": [
+      {
+        "serviceId": "487f41d3-663b-45b0-a800-3e7ee40fed30",
+        "name": "Battery health check",
+        "quantity": 1,
+        "available": true
+      },
+      {
+        "serviceId": "9c52919e-8122-4af7-8f65-9e71e37f06bb",
+        "name": "Exterior wash",
+        "quantity": 1,
+        "available": true
+      },
+      {
+        "serviceId": "f50b684a-2fd6-4a49-9bd2-3030f8f45316",
+        "name": "Tyre & safety inspection",
+        "quantity": 1,
+        "available": true
+      }
+    ]
+  },
+  {
+    "id": "9c52919e-8122-4af7-8f65-9e71e37f06bb",
+    "name": "Exterior wash",
+    "slug": "exterior-wash",
+    "description": "A fresh start for your daily drive. A careful exterior clean that lifts road dust and leaves your car looking its best.",
+    "categoryId": "b9977816-1832-4207-8aa5-96a389a5a50f",
+    "categoryName": "Cleaning",
+    "type": "INDIVIDUAL",
+    "price": 650,
+    "originalPrice": 650,
+    "effectivePrice": 650,
+    "currency": "BDT",
+    "durationMinutes": 45,
+    "imageUrl": "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?auto=format&fit=crop&w=900&q=80",
+    "inclusions": [
+      "Exterior foam wash",
+      "Wheel and tyre cleaning",
+      "Microfibre hand dry"
+    ],
+    "available": true,
+    "isFeatured": true,
+    "activeOffer": null,
+    "packageItems": []
+  },
+  {
+    "id": "3c8c0fca-1af4-4d1a-a1ff-c1d59b667114",
+    "name": "Interior detailing",
+    "slug": "interior-detail",
+    "description": "Give your cabin a little attention. A thorough clean for the surfaces, seats and small spaces you spend time with every day.",
+    "categoryId": "97430bb0-6bd5-4c01-82ad-4e7adba0301b",
+    "categoryName": "Detailing",
+    "type": "INDIVIDUAL",
+    "price": 2250,
+    "originalPrice": 2500,
+    "effectivePrice": 2250,
+    "currency": "BDT",
+    "durationMinutes": 120,
+    "imageUrl": "https://images.unsplash.com/photo-1507136566006-cfc505b114fc?auto=format&fit=crop&w=900&q=80",
+    "inclusions": [
+      "Interior vacuum",
+      "Dashboard and console cleaning",
+      "Seat and upholstery care"
+    ],
+    "available": true,
+    "isFeatured": true,
+    "activeOffer": {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "serviceId": "3c8c0fca-1af4-4d1a-a1ff-c1d59b667114",
+      "title": "Interior detailing introductory offer",
+      "description": "Demonstration 10% discount.",
+      "discountType": "PERCENTAGE",
+      "discountValue": 10,
+      "startsAt": "2026-11-17T05:36:24.389Z",
+      "endsAt": "2027-02-15T05:36:24.389Z"
+    },
+    "packageItems": []
+  },
+  {
+    "id": "51540114-31ec-49d2-b55c-917b16a9bc58",
+    "name": "Premium Car Care",
+    "slug": "premium-car-care",
+    "description": "Demonstration Premium Car Care workshop package.",
+    "categoryId": "41549652-2d21-482b-9bfe-f1f7af708c18",
+    "categoryName": "Packages",
+    "type": "PACKAGE",
+    "price": 3300,
+    "originalPrice": 3500,
+    "effectivePrice": 3300,
+    "currency": "BDT",
+    "durationMinutes": 210,
+    "imageUrl": null,
+    "inclusions": [
+      "Exterior wash",
+      "Interior detailing",
+      "AC inspection"
+    ],
+    "available": true,
+    "isFeatured": false,
+    "activeOffer": {
+      "id": "10000000-0000-4000-8000-000000000002",
+      "serviceId": "51540114-31ec-49d2-b55c-917b16a9bc58",
+      "title": "Premium package introductory offer",
+      "description": "Demonstration BDT 200 discount.",
+      "discountType": "FIXED_AMOUNT",
+      "discountValue": 200,
+      "startsAt": "2026-11-17T05:36:24.389Z",
+      "endsAt": "2027-02-15T05:36:24.389Z"
+    },
+    "packageItems": [
+      {
+        "serviceId": "3c8c0fca-1af4-4d1a-a1ff-c1d59b667114",
+        "name": "Interior detailing",
+        "quantity": 1,
+        "available": true
+      },
+      {
+        "serviceId": "55f91a99-ff9c-4c7e-b58e-a8cff8939551",
+        "name": "AC inspection",
+        "quantity": 1,
+        "available": true
+      },
+      {
+        "serviceId": "9c52919e-8122-4af7-8f65-9e71e37f06bb",
+        "name": "Exterior wash",
+        "quantity": 1,
+        "available": true
+      }
+    ]
+  },
+  {
+    "id": "184683a5-78f5-472c-bb16-39ad5c158819",
+    "name": "Engine oil change",
+    "slug": "oil-change",
+    "description": "Keep your engine running smoothly with an oil and filter change. The workshop will confirm the correct oil specification for your car.",
+    "categoryId": "88f908f7-ede4-49dd-8b94-7b0f60fc602d",
+    "categoryName": "Maintenance",
+    "type": "INDIVIDUAL",
+    "price": 3200,
+    "originalPrice": 3200,
+    "effectivePrice": 3200,
+    "currency": "BDT",
+    "durationMinutes": 60,
+    "imageUrl": "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=900&q=80",
+    "inclusions": [
+      "Engine oil replacement",
+      "Oil filter replacement",
+      "Fluid level check"
+    ],
+    "available": true,
+    "isFeatured": false,
+    "activeOffer": null,
+    "packageItems": []
+  },
+  {
+    "id": "f18c1f99-8383-4021-b1ae-4662ed38884b",
+    "name": "Essential Maintenance",
+    "slug": "essential-maintenance",
+    "description": "Demonstration Essential Maintenance workshop package.",
+    "categoryId": "41549652-2d21-482b-9bfe-f1f7af708c18",
+    "categoryName": "Packages",
+    "type": "PACKAGE",
+    "price": 3800,
+    "originalPrice": 3800,
+    "effectivePrice": 3800,
+    "currency": "BDT",
+    "durationMinutes": 120,
+    "imageUrl": null,
+    "inclusions": [
+      "Engine oil change",
+      "Battery health check",
+      "Tyre & safety inspection"
+    ],
+    "available": true,
+    "isFeatured": false,
+    "activeOffer": null,
+    "packageItems": [
+      {
+        "serviceId": "184683a5-78f5-472c-bb16-39ad5c158819",
+        "name": "Engine oil change",
+        "quantity": 1,
+        "available": true
+      },
+      {
+        "serviceId": "487f41d3-663b-45b0-a800-3e7ee40fed30",
+        "name": "Battery health check",
+        "quantity": 1,
+        "available": true
+      },
+      {
+        "serviceId": "f50b684a-2fd6-4a49-9bd2-3030f8f45316",
+        "name": "Tyre & safety inspection",
+        "quantity": 1,
+        "available": true
+      }
+    ]
+  },
+  {
+    "id": "55f91a99-ff9c-4c7e-b58e-a8cff8939551",
+    "name": "AC inspection",
+    "slug": "ac-inspection",
+    "description": "Less cooling than usual? Have your air conditioning checked before deciding on repairs or replacement parts.",
+    "categoryId": "3701f011-dc95-4343-ae6c-2286cb765643",
+    "categoryName": "Inspection",
+    "type": "INDIVIDUAL",
+    "price": 800,
+    "originalPrice": 800,
+    "effectivePrice": 800,
+    "currency": "BDT",
+    "durationMinutes": 45,
+    "imageUrl": null,
+    "inclusions": [
+      "Cooling performance check",
+      "Vent and airflow inspection",
+      "Inspection findings explained"
+    ],
+    "available": true,
+    "isFeatured": false,
+    "activeOffer": null,
+    "packageItems": []
+  },
+  {
+    "id": "487f41d3-663b-45b0-a800-3e7ee40fed30",
+    "name": "Battery health check",
+    "slug": "battery-check",
+    "description": "Understand the condition of your battery and charging system with a workshop inspection.",
+    "categoryId": "3701f011-dc95-4343-ae6c-2286cb765643",
+    "categoryName": "Inspection",
+    "type": "INDIVIDUAL",
+    "price": 400,
+    "originalPrice": 400,
+    "effectivePrice": 400,
+    "currency": "BDT",
+    "durationMinutes": 30,
+    "imageUrl": null,
+    "inclusions": [
+      "Battery voltage test",
+      "Terminal inspection",
+      "Charging system check"
+    ],
+    "available": true,
+    "isFeatured": false,
+    "activeOffer": null,
+    "packageItems": []
+  },
+  {
+    "id": "f50b684a-2fd6-4a49-9bd2-3030f8f45316",
+    "name": "Tyre & safety inspection",
+    "slug": "tyre-inspection",
+    "description": "Plan your next journey with a tyre and basic safety inspection. A technician will explain any issues that need further attention.",
+    "categoryId": "3701f011-dc95-4343-ae6c-2286cb765643",
+    "categoryName": "Inspection",
+    "type": "INDIVIDUAL",
+    "price": 600,
+    "originalPrice": 600,
+    "effectivePrice": 600,
+    "currency": "BDT",
+    "durationMinutes": 30,
+    "imageUrl": "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=900&q=80",
+    "inclusions": [
+      "Tyre pressure and tread check",
+      "Visible wear inspection",
+      "Basic safety checks"
+    ],
+    "available": true,
+    "isFeatured": false,
+    "activeOffer": null,
+    "packageItems": []
+  }
+]
