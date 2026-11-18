@@ -59,7 +59,7 @@ Health checks process liveness; catalog requests additionally exercise database 
 | `NODE_ENV` | development; development/test/production |
 | `PORT` | 3000; 1–65535 |
 | `DATABASE_URL` | Required PostgreSQL runtime URL |
-| `DIRECT_URL` | Optional direct migration URL; Prisma falls back to DATABASE_URL when unset. Do not set to an empty string. Use same database/branch. |
+| `DIRECT_URL` | Optional direct connection for migrations and seeding. Both use `DATABASE_URL` when this variable is unset. Use the same database and branch for both URLs. |
 | `CORS_ORIGINS` | Exact comma-separated HTTP(S) browser origins; required HTTPS origins in production |
 | `HTTP_BODY_LIMIT_BYTES` | 65536; 1024–1048576 |
 | `AUTH_ACCESS_TOKEN_SECRET` | Required random secret, minimum 32 bytes, no placeholder |

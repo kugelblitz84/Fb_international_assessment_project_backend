@@ -7,37 +7,29 @@ import { demoServices } from './seed-data';
 export async function seed(prisma: PrismaClient) {
   await prisma.$transaction(
     async (tx) => {
-      const categories = new Map<string, string>();
-      for (const [sortOrder, name] of [
+      const categoryRows = [
         'Cleaning',
         'Detailing',
         'Maintenance',
         'Inspection',
         'Packages',
-      ].entries()) {
-        const slug = name.toLowerCase();
-        const category = await tx.serviceCategory.upsert({
-          where: { slug },
-          update: {},
-          create: { slug, name, sortOrder },
-        });
-        categories.set(slug, category.id);
-      }
-      const services = new Map<string, string>();
-      for (const [sortOrder, service] of demoServices.entries()) {
-        const { category, ...data } = service;
-        const record = await tx.service.upsert({
-          where: { slug: data.slug },
-          update: {},
-          create: {
-            ...data,
-            categoryId: categories.get(category)!,
-            sortOrder,
-            isFeatured: sortOrder < 2,
-          },
-        });
-        services.set(data.slug, record.id);
-      }
+      ].map((name, sortOrder) => ({
+        slug: name.toLowerCase(),
+        name,
+        sortOrder,
+      }));
+      await tx.serviceCategory.createMany({
+        data: categoryRows,
+        skipDuplicates: true,
+      });
+      // Existing slugs can have different IDs from those generated on this run.
+      const categoryRecords = await tx.serviceCategory.findMany({
+        where: { slug: { in: categoryRows.map((row) => row.slug) } },
+        select: { slug: true, id: true },
+      });
+      const categories = new Map(
+        categoryRecords.map((row) => [row.slug, row.id]),
+      );
       const packages = [
         {
           slug: 'express-car-care',
@@ -61,84 +53,80 @@ export async function seed(prisma: PrismaClient) {
           items: ['oil-change', 'battery-check', 'tyre-inspection'],
         },
       ];
-      for (const [sortOrder, p] of packages.entries()) {
-        const { items, ...data } = p;
-        const record = await tx.service.upsert({
-          where: { slug: p.slug },
-          update: {},
-          create: {
-            ...data,
-            type: 'PACKAGE',
-            categoryId: categories.get('packages')!,
-            description: `Demonstration ${p.name} workshop package.`,
-            inclusions: items.map(
-              (slug) => demoServices.find((s) => s.slug === slug)!.name,
-            ),
-            sortOrder,
-          },
-        });
-        services.set(p.slug, record.id);
-        for (const slug of items)
-          await tx.packageItem.upsert({
-            where: {
-              packageId_serviceId: {
-                packageId: record.id,
-                serviceId: services.get(slug)!,
-              },
-            },
-            update: {},
-            create: {
-              packageId: record.id,
-              serviceId: services.get(slug)!,
-              quantity: 1,
-            },
-          });
-      }
+      const serviceRows: Prisma.ServiceCreateManyInput[] = [
+        ...demoServices.map(({ category, ...data }, sortOrder) => ({
+          ...data,
+          categoryId: categories.get(category)!,
+          sortOrder,
+          isFeatured: sortOrder < 2,
+        })),
+        ...packages.map(({ items, ...data }, sortOrder) => ({
+          ...data,
+          type: 'PACKAGE' as const,
+          categoryId: categories.get('packages')!,
+          description: `Demonstration ${data.name} workshop package.`,
+          inclusions: items.map(
+            (slug) => demoServices.find((s) => s.slug === slug)!.name,
+          ),
+          sortOrder,
+        })),
+      ];
+      await tx.service.createMany({ data: serviceRows, skipDuplicates: true });
+      const serviceRecords = await tx.service.findMany({
+        where: { slug: { in: serviceRows.map((row) => row.slug) } },
+        select: { slug: true, id: true },
+      });
+      const services = new Map(serviceRecords.map((row) => [row.slug, row.id]));
+      await tx.packageItem.createMany({
+        data: packages.flatMap((pkg) =>
+          pkg.items.map((slug) => ({
+            packageId: services.get(pkg.slug)!,
+            serviceId: services.get(slug)!,
+            quantity: 1,
+          })),
+        ),
+        skipDuplicates: true,
+      });
       const startsAt = new Date();
       const endsAt = new Date(startsAt.getTime() + 90 * 86400000);
-      for (const offer of [
-        {
-          id: '10000000-0000-4000-8000-000000000001',
-          serviceId: services.get('interior-detail')!,
-          title: 'Interior detailing introductory offer',
-          description: 'Demonstration 10% discount.',
-          discountType: 'PERCENTAGE' as const,
-          discountValue: '10',
-        },
-        {
-          id: '10000000-0000-4000-8000-000000000002',
-          serviceId: services.get('premium-car-care')!,
-          title: 'Premium package introductory offer',
-          description: 'Demonstration BDT 200 discount.',
-          discountType: 'FIXED_AMOUNT' as const,
-          discountValue: '200',
-        },
-      ])
-        await tx.offer.upsert({
-          where: { id: offer.id },
-          update: {},
-          create: { ...offer, startsAt, endsAt },
-        });
-      for (const name of ['Bay 1', 'Bay 2'])
-        await tx.serviceBay.upsert({
-          where: { name },
-          update: {},
-          create: { name },
-        });
+      await tx.offer.createMany({
+        data: [
+          {
+            id: '10000000-0000-4000-8000-000000000001',
+            serviceId: services.get('interior-detail')!,
+            title: 'Interior detailing introductory offer',
+            description: 'Demonstration 10% discount.',
+            discountType: 'PERCENTAGE',
+            discountValue: '10',
+            startsAt,
+            endsAt,
+          },
+          {
+            id: '10000000-0000-4000-8000-000000000002',
+            serviceId: services.get('premium-car-care')!,
+            title: 'Premium package introductory offer',
+            description: 'Demonstration BDT 200 discount.',
+            discountType: 'FIXED_AMOUNT',
+            discountValue: '200',
+            startsAt,
+            endsAt,
+          },
+        ],
+        skipDuplicates: true,
+      });
+      await tx.serviceBay.createMany({
+        data: [{ name: 'Bay 1' }, { name: 'Bay 2' }],
+        skipDuplicates: true,
+      });
       // Every day 09:00-12:00 and 13:00-18:00, Asia/Dhaka. Packages fit the afternoon interval.
-      for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++)
-        for (const [opensAt, closesAt] of [
-          ['09:00', '12:00'],
-          ['13:00', '18:00'],
-        ]) {
-          await tx.businessHours.upsert({
-            where: {
-              dayOfWeek_opensAt_closesAt: { dayOfWeek, opensAt, closesAt },
-            },
-            update: {},
-            create: { dayOfWeek, opensAt, closesAt },
-          });
-        }
+      const hours: Prisma.BusinessHoursCreateManyInput[] = [];
+      for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+        hours.push(
+          { dayOfWeek, opensAt: '09:00', closesAt: '12:00' },
+          { dayOfWeek, opensAt: '13:00', closesAt: '18:00' },
+        );
+      }
+      await tx.businessHours.createMany({ data: hours, skipDuplicates: true });
       const settings: Record<string, Prisma.InputJsonValue> = {
         platformName: 'AutoCare',
         description:
@@ -187,27 +175,33 @@ export async function seed(prisma: PrismaClient) {
           },
         ],
       };
-      for (const [key, value] of Object.entries(settings))
-        await tx.platformSetting.upsert({
-          where: { key },
-          update: {},
-          create: { key, value },
-        });
+      await tx.platformSetting.createMany({
+        data: Object.entries(settings).map(([key, value]) => ({ key, value })),
+        skipDuplicates: true,
+      });
     },
-    { timeout: 30000 },
+    { maxWait: 15000, timeout: 30000 },
   );
 }
 
 if (require.main === module) {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error('DATABASE_URL is required');
+  const url = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
+  if (!url) throw new Error('DIRECT_URL or DATABASE_URL is required');
   const prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString: url }),
   });
   seed(prisma)
     .then(() => console.log('AutoCare demonstration data seeded.'))
-    .catch(() => {
-      console.error('Seeding failed. Check database access and migrations.');
+    .catch((error: unknown) => {
+      const code =
+        error instanceof Error && 'code' in error ? ` [${error.code}]` : '';
+      const detail =
+        error instanceof Error
+          ? error.message || error.name
+          : 'Unknown database error';
+      console.error(
+        `Seeding failed${code}: ${detail.replace(/postgres(?:ql)?:\/\/\S+/gi, '[redacted]')}`,
+      );
       process.exitCode = 1;
     })
     .finally(() => prisma.$disconnect());
