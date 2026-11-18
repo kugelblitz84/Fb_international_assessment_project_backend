@@ -1,31 +1,64 @@
-# Architecture
+# Backend architecture
 
-The existing `src/app`, typed `APP_CONFIG`, `PrismaModule`, health endpoint, domain error base and Zod request pipe are preserved. HTTP retains Helmet, body limits, untrusted proxy headers, explicit credentialed CORS and URI versioning under `/api/v1`.
+## Overview
 
-Features separate domain contracts/rules, Prisma data implementations, application orchestration, HTTP validation/controllers and Nest module composition. Controllers never query Prisma. Concrete injectable repositories are used without a generic repository framework. The catalog domain uses Prisma's exact Decimal implementation for money; persistence records are mapped in data modules. `PlatformService` is a small read-only query service with an explicit public setting allowlist.
+NestJS 11 uses Express, dependency injection and feature modules; Zod validates incoming requests; Prisma 7 with the PostgreSQL adapter handles persistence; SQL migrations implement business constraints not expressible in Prisma alone. REST endpoints are URI-versioned under `/api/v1`.
 
-| Area | Responsibility |
-|---|---|
-| `core/auth` | JWTs, cookie/CSRF policy, sessions, global guard, bounded authentication throttling |
-| `features/auth/register` | Registration and password hashing orchestration |
-| `features/auth/login` | Credentials, account status and independent sessions |
-| `features/auth/data` | Scrypt hashing and allowlisted user persistence |
-| `features/catalog` | Active catalog/package/offer queries, DTOs, shared Decimal pricing |
-| `features/scheduling` | Dhaka time, business-hour intervals, persisted slots and reservation reads |
-| `features/appointments` | Booking policy, transactional reservation/snapshots, owner-scoped reads/cancellation |
-| `features/platform` | Public policy JSON and authoritative business hours |
-| `features/assistant` | Public context, replaceable Gemini provider, strict structured actions, request limits and PostgreSQL daily budget |
+```mermaid
+flowchart LR
+  F[Flutter mobile / web] --> H[NestJS HTTP controllers]
+  H --> G[Authentication / roles / validation]
+  G --> S[Application services and domain policies]
+  S --> R[Repositories and Prisma]
+  R --> D[(PostgreSQL)]
+  S --> AI[Gemini]
+  S --> C[Cloudinary]
+  S --> P[SSLCommerz sandbox]
+```
 
-Booking uses one transactional data operation. It loads the active service/category/package components, slot, hours and optional owned vehicle; an application callback validates booking policy and calculates the price. PostgreSQL's exclusion constraint and partial unique index enforce capacity under concurrency. Conflict SQLSTATEs become HTTP 409.
+## Source layout
 
-Refresh atomically consumes old history, conditionally swaps the session digest and inserts new history. A failed conditional update throws to roll back the entire transaction. Cookies and tokens are returned only after commit. Known consumed-token replay revokes that session outside the failed transaction; unknown digests cannot revoke it. Concurrent refresh is intentionally strict: the losing replay may revoke the session, so clients must serialize refresh.
+```text
+src/
+  main.ts
+  app/             root module, bootstrap, HTTP middleware
+  core/
+    auth/          JWT, access and role guards, refresh sessions, cookies, limits
+    config/        typed and validated application configuration
+    database/      Prisma service and module
+    errors/        domain errors
+    validator/     Zod validation pipe
+  features/
+    auth/          registration, login, profile and password hashing
+    catalog/       categories, services, packages, offers and pricing
+    scheduling/    persisted availability and workshop time
+    appointments/  booking creation, ownership, cancellation
+    assistant/     prompt, context, quota, model adapter, response validation
+    admin/         catalog, offers, appointments and dashboard management
+    media/         image validation and Cloudinary storage
+    payments/      gateway initiation, verification and reconciliation
+    platform/      public settings
+    health/        process liveness
+prisma/            schema, feature models, migrations and seeds
+scripts/           admin CLI and schema/example export utilities
+test/              unit and database-backed integration tests
+```
 
-Access authorization queries PostgreSQL on every request for session ownership, expiry, revocation and active user status. No session cache is used. `@Public()` skips authentication; `@OptionalAuth()` permits no header but rejects invalid supplied credentials. All other routes require a bearer token.
+## Separation of concerns
 
-## Inspected sources
+Controllers define HTTP contracts and validation, application services coordinate use cases, domain modules encode rules, and repositories implement storage. Simpler modules may combine application/persistence responsibilities. Shared guards enforce authentication by default; explicit public and optional-auth decorators define exceptions. Admin role checks are evaluated on authenticated requests using current database user state. No separate admin authentication system exists.
 
-- Backend foundation: `4384adc37982816f72197a9c08fcb803e6dbf276`.
-- [Authentication reference](https://github.com/kugelblitz84/edu_app_backend/tree/002711b1219b2bf4f64754a1c78f2c13a9b3c7ad): inspected user/session/history models, session/access-token/cookie services, guard, controller, module, README, register/login use cases and scrypt services. Educational roles, institutions and unrelated features were omitted. AutoCare adds rollback on failed rotation, direct database session checks and HTTP-compatible native development cookies.
-- The adjacent [Flutter repository](https://github.com/kugelblitz84/assessment_project_fb_international_frontend) was read without modification: `demo_workshop.dart`, service/appointment/availability models, CreateBookingPayload, routes, catalog/appointment adapters, auth repository, native/web cookie transports. BookingStatus requires lowercase strings; authentication expects `{accessToken,user}` and `{user}` for `/auth/me`.
+## Security and reliability
 
-The subsequent Gemini feature injects CatalogService and PlatformService, never private appointment/user repositories. AssistantContextService builds bounded public JSON; GeminiService uses the official SDK with a separate system instruction and model-role mapping; AssistantService validates output and refreshes authoritative data before returning actions/prices. The provider contract can be replaced by a fake in tests. AssistantBudgetRepository atomically counts daily requests under reserved internal PlatformSetting keys, excluded from public knowledge. No chat storage, vector database, admin workflow, payment flow, notifications, staff system or vendor abstraction was added.
+- JWT access tokens use HS256 and verify issuer, audience, expiry and session identity. Scrypt with random salt hashes passwords; timing-safe comparison protects verification.
+- Refresh tokens are random, stored as SHA-256 digests and rotated transactionally. Reuse revokes the affected session. Browser refresh/logout use host-only HttpOnly cookies, exact trusted origins and session-bound CSRF tokens.
+- Inputs use strict Zod schemas; the API rejects unauthorized ownership and forbidden admin actions. Helmet, body limits and sanitized parser errors protect request boundaries.
+- Appointment creation derives price and identity server-side and relies on database exclusion/unique constraints for concurrency. Row locks serialize payment changes with cancellation and administration.
+- Gemini receives only public catalog/settings, not personal records. Structured response validation and current-catalog checks restrict recommendation actions.
+- Cloudinary and SSLCommerz credentials stay server-side. Gateway verification happens independently of client redirects. Private appointment/payment/assistant routes use no-store caching.
+
+Rate limits for short windows are process-local; the assistant daily budget and payment reconciliation spacing are database-backed. For multi-replica production deployment, use shared ingress throttling. See [FEATURES.md](features.md) and [DATABASE.md](database.md) for business logic.
+
+## Tests
+
+Unit tests cover pricing, workshop time, authentication/config, admin and assistant logic. Integration tests cover auth, catalog, booking concurrency, ownership, admin, AI and payments. Test databases must be isolated because suites create/delete test rows and temporarily change seed records. No test execution is claimed by this documentation alone.

@@ -1,6 +1,6 @@
-# Database
+# Database design
 
-Prisma reads the `prisma/` schema directory; feature models live in `prisma/models/`. Entity IDs are UUID strings. `AuthRefreshToken.digest` is a 64-character lowercase SHA-256 hex primary key; `PlatformSetting.key` is a text primary key; `PackageItem` has composite `(packageId,serviceId)` identity. Use API IDs directly: Flutter demo slugs are not live IDs. `slug` is a separate unique catalog field. Timestamps are PostgreSQL `timestamptz`; money is `decimal(12,2)`; inclusions are `text[]`.
+PostgreSQL is authoritative. Prisma reads `prisma/schema.prisma` and feature models in `prisma/models/`; `prisma/migrations/` adds SQL constraints and is the canonical migration history. UUIDs identify entities except refresh token digests, setting keys and the composite package-item key. Money uses Decimal(12,2), timestamps use timestamptz, and workshop time is Asia/Dhaka.
 
 ```mermaid
 erDiagram
@@ -15,10 +15,11 @@ erDiagram
   Service ||--o{ Offer : promotes
   Service ||--o{ AppointmentSlot : schedules
   ServiceBay ||--o{ AppointmentSlot : capacity
-  AppointmentSlot ||--o{ Appointment : historicalReservations
+  AppointmentSlot ||--o{ Appointment : reservations
   ServiceBay ||--o{ Appointment : reserves
   Service ||--o{ Appointment : snapshots
   Offer o|--o{ Appointment : applied
+  Appointment ||--o{ Payment : attempts
   BusinessHours {
     uuid id PK
     int dayOfWeek
@@ -29,63 +30,50 @@ erDiagram
   PlatformSetting {
     string key PK
     json value
-    timestamptz updatedAt
+  }
+  MediaAsset {
+    uuid id PK
+    string storageProvider
+    string cloudinaryPublicId
+    string cloudinarySecureUrl
+    string mimeType
+    int fileSize
   }
 ```
 
-[DBML](schema.dbml) contains all migrated tables, columns, enums, foreign keys, unique/composite keys and constraint notes. Regenerate from a migrated database with `node scripts/export-schema.cjs`.
+MediaAsset, BusinessHours and PlatformSetting are independent tables; catalog images are URL references, not a MediaAsset foreign key.
 
-## Migrations
+| Entity | Purpose / important fields |
+|---|---|
+| User | unique normalized email, name, passwordHash, status, role |
+| AuthSession | user reference, refresh digest, expiry, revocation and session metadata |
+| AuthRefreshToken | digest primary key, session reference and consumed history |
+| Vehicle | user-owned optional vehicle details |
+| ServiceCategory | unique slug, active status, sort order, image URL |
+| Service | category, individual/package type, price, currency, duration, inclusions, featured/active, image URL |
+| PackageItem | composite packageId/serviceId key, quantity; individual component only |
+| Offer | service, discount type/value, validity interval, active flag |
+| ServiceBay | unique bay name and active flag |
+| BusinessHours | unique weekday/open/close interval, closed flag |
+| AppointmentSlot | service/bay, start/end, active flag; unique service/bay/start |
+| Appointment | owner/service/slot/bay, optional vehicle/offer, status and price/name/duration snapshots |
+| Payment | appointment, merchant reference, amount/currency, status, verification references, applied flag, incidents |
+| MediaAsset | storage provider, optional legacy bytes, Cloudinary ID/URL, MIME, size |
+| PlatformSetting | public settings and reserved internal assistant daily counters |
 
-1. `202611170001_initial`: thirteen tables, four enums, relations, indexes and keys.
-2. `202611170002_business_constraints`: SQL enabling `btree_gist`, normalized email, positive durations/quantities, price/discount checks, ordered intervals and valid hours. Package triggers prevent self/nested/non-individual contents and prevent changing composed service types.
+## Integrity and concurrency
 
-`appointments_bay_no_overlap` combines `bay_id =` with `tstzrange(starts_at,ends_at,'[)') &&`, for `PENDING` and `CONFIRMED`. A partial unique index on `slot_id` has the same active-status predicate. Cancelled/completed appointments remain history but release capacity. Adjacent intervals are allowed. Slots for different services may overlap; appointments may not occupy the same bay concurrently.
+The custom `btree_gist` exclusion constraint on appointments rejects overlapping `[start,end)` ranges within the same bay for pending/confirmed rows. The active-slot partial unique index also rejects two active bookings against a slot. Adjacent intervals are allowed. Cancelled/completed rows remain historical but release capacity. SQL check constraints validate normalized emails, money, duration, intervals, discounts, quantity and media metadata. Package triggers prohibit nested/self compositions and incompatible type changes. Appointment references use restrictive deletes to preserve history.
 
-Apply existing migrations with `npm run prisma:migrate:deploy`; develop changes with `npm run prisma:migrate:dev`. Do not replace migrations with `db push`: Prisma does not express the custom exclusion constraint, partial index or triggers. The migration role needs extension privileges, or an operator must preinstall `btree_gist`. No setup script resets a database.
+Payment migration adds unique merchant, validation and bank transaction references, partial unique indexes for one active and one applied payment per appointment, verification invariants and immutable financial snapshot protection. Payment/cancellation/admin operations lock the same appointment row. External gateway requests are outside database transactions.
 
-Session deletion cascades to refresh history; user deletion cascades to sessions. Appointment references and vehicle/catalog relationships restrict deletion to preserve history. Disable catalog entries instead of deleting them. Consumed refresh history remains until an operator removes expired sessions; no scheduled cleanup is implemented.
+## Migration history
 
-## Seed and schedule
+1. `202611170001_initial` — initial entities, enums, relations and indexes.
+2. `202611170002_business_constraints` — btree_gist, exclusion/partial unique indexes, checks and package triggers.
+3. `202611170003_admin` — roles and legacy media storage.
+4. `202611170004_integrations` — Cloudinary media metadata and payments.
 
-`npm run prisma:seed` is transactionally idempotent using slugs, deterministic sample-offer IDs, interval keys and bay names. Existing records are not overwritten. Offers start at first insertion and expire 90 days later; rerunning does not renew them.
+Run `npm run prisma:migrate:deploy` on a prepared database, then optionally `npm run prisma:seed`. See [SETUP.md](setup.md). Do not use `db push` or reset as a substitute. Seed is idempotent and creates five categories, six individual services, three packages, two offers, two bays, fourteen business-hour intervals and ten public settings. Existing rows and offer expiry dates are preserved. Default hours are 09:00–12:00 and 13:00–18:00 daily. No users or bookings are seeded.
 
-| Item | Price BDT | Minutes |
-|---|---:|---:|
-| Exterior wash | 650 | 45 |
-| Interior detailing | 2500 | 120 |
-| Engine oil change | 3200 | 60 |
-| AC inspection | 800 | 45 |
-| Battery health check | 400 | 30 |
-| Tyre & safety inspection | 600 | 30 |
-| Express Car Care | 1400 | 105 |
-| Premium Car Care | 3500 | 210 |
-| Essential Maintenance | 3800 | 120 |
-
-Flutter descriptions, inclusions and available Unsplash URLs are preserved in `prisma/seed-data.ts`. Packages each contain the three requested individual services, quantity one. Sample offers: 10% off Interior detailing (2250 effective), BDT 200 off Premium Car Care (3300 effective), while valid.
-
-Two bays operate every day, 09:00–12:00 and 13:00–18:00 Asia/Dhaka, including Friday. `dayOfWeek` is 0=Sunday through 6=Saturday; local times use `HH:mm`. Separate intervals represent breaks. The afternoon accommodates the 210-minute premium package.
-
-Availability generates requested dates on demand within a rolling window (default: today plus 29 days), at 15-minute increments. Slots persist with `(serviceId,bayId,startsAt)` uniqueness and stable IDs. Past slots remain; no `isBooked` flag or scheduled cleanup exists. Closed intervals, disabled bays, stale durations, times outside hours and past starts are excluded. The single-workshop implementation uses Asia/Dhaka's UTC+06:00 conversion.
-
-The Gemini integration adds no tables. It uses reserved `PlatformSetting` keys `internal:assistant:requests:YYYY-MM-DD` with `{ "count": number }` for atomic shared daily usage limits. These keys are excluded from the public allowlist and provider prompts. They count requests only, never chat content, profiles or tokens. Do not edit active-day counters; old counters can be archived by an operator after their UTC day.
-
-## Administration migration
-
-`202611170003_admin` adds UserRole (CUSTOMER, ADMIN), a NOT NULL users.role column with CUSTOMER default, and media_assets (UUID, bytea data, verified mime_type, file_size, created_at). Existing users retain all data and become CUSTOMER automatically. The media check constraint enforces allowed MIME types, actual byte length and the 2097152-byte maximum. Uploaded binaries have no catalog joins and are selected only by public binary reads.
-
-Deploy with `npm run prisma:validate`, `npm run prisma:generate`, `npm run prisma:migrate:deploy`; do not reset or replace earlier migrations. Database support/permissions for btree_gist remain required. Back up before deploying as usual. Create administrators explicitly with `npm run admin:create` after migration, never via ordinary catalog seed.
-
-Service/package changes use serializable transactions; unique/FK conflicts become HTTP errors. Existing composition/type triggers remain intact. Future slot intervals follow duration edits transactionally, while appointment snapshots remain immutable. Booking takes a shared service lock to serialize against admin service edits. Appointment status updates condition on the previous status; completed/cancelled states leave the existing booking exclusion predicate and release capacity. All existing ownership constraints remain.
-
-Schema documentation was exported from the isolated migrated test database; SQL migrations remain authoritative.
-
-## Cloudinary and payment migration
-
-`202611170004_integrations` is additive. MediaStorageProvider (POSTGRESQL/CLOUDINARY) defaults existing rows to POSTGRESQL, retains their data and makes bytea nullable. cloudinary_public_id is nullable/unique; cloudinary_secure_url is nullable. media_values requires binary bytes with matching size for legacy rows, or a public ID and HTTPS URL with no bytes for Cloudinary rows. MIME and the 2 MiB limit apply to both. No service/category URLs, offers, seed rows or previous migrations are changed.
-
-Appointment has multiple Payment attempts through restrictive appointment_id references. Payment records snapshot Decimal(12,2) amount/BDT, a unique varchar(30) merchant transaction ID and provider; a trigger prevents edits to that snapshot. PaymentStatus includes INITIATING, PENDING, PAID, FAILED, CANCELLED, EXPIRED and REVIEW_REQUIRED. Nullable unique validation/bank IDs, nullable session/checkout URL, safe reason code, paidAt, lastReconciledAt, applied and timestamps support reconciliation. gateway_incidents contains only filtered references/reason codes, never raw responses or card data. There is no customer shipping/contact persistence in this table.
-
-The payments_one_active partial unique index allows at most one INITIATING/PENDING attempt per appointment; payments_one_applied allows at most one applied=true. Applied payments require verified references and paidAt and may be PAID or REVIEW_REQUIRED. A later incident preserves an already-applied charge. Row locks on the appointment serialize initiation, verification, customer cancellation and admin transitions. Transactions never stay open across provider requests. REVIEW_REQUIRED blocks new checkouts and normal conflicting appointment operations. Historical failed/terminal attempts remain. No refund ledger or reset script is introduced.
-
-No attempts means summary UNPAID; summary is derived from attempts rather than a second mutable appointment field. Existing reservation exclusion constraints and historical appointment/price snapshots remain unchanged. Deploy with `npm run prisma:migrate:deploy`; do not use db push/reset. [Payment rules and reconciliation](payment-api.md).
+Optional full physical schema export: preserve the existing `docs/schema.dbml` or regenerate it from an isolated migrated database using `node scripts/export-schema.cjs`. Prisma models plus SQL migrations remain the source of truth. Historical slot/session cleanup and automated refund ledger are outside current scope.
